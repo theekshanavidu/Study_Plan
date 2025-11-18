@@ -108,22 +108,39 @@ function renderRegister(){
   <div class="bg-slate-800 p-6 rounded-xl w-full max-w-md mx-auto space-y-3">
     <h2 class="text-2xl font-bold">Register</h2>
     <form id="reg-form" class="flex flex-col gap-2">
-      <input type="text" name="firstName" placeholder="First Name" class="input-field" required>
-      <input type="text" name="lastName" placeholder="Last Name" class="input-field" required>
-      <input type="date" name="birthday" class="input-field" required>
-      <input type="text" name="school" placeholder="School" class="input-field" required>
-      <input type="text" name="phone" placeholder="Phone" class="input-field" required>
-      <select name="examYear" class="input-field" required>
+      
+      <label for="firstName">First Name</label>
+      <input id="firstName" type="text" name="firstName" placeholder="First Name" class="input-field" required>
+      
+      <label for="lastName">Last Name</label>
+      <input id="lastName" type="text" name="lastName" placeholder="Last Name" class="input-field" required>
+      
+      <label for="birthday">Birthday</label>
+      <input id="birthday" type="date" name="birthday" class="input-field" required>
+      
+      <label for="school">School</label>
+      <input id="school" type="text" name="school" placeholder="School" class="input-field" required>
+      
+      <label for="phone">Phone</label>
+      <input id="phone" type="text" name="phone" placeholder="Phone" class="input-field" required>
+      
+      <label for="examYear">Exam Year</label>
+      <select id="examYear" name="examYear" class="input-field" required>
         <option>2026 A/L</option>
         <option>2027 A/L</option>
         <option>2028 A/L</option>
       </select>
-      <input type="email" name="email" placeholder="Email" class="input-field" required>
-      <input type="password" name="password" placeholder="Password" class="input-field" required>
+      
+      <label for="email">Email</label>
+      <input id="email" type="email" name="email" placeholder="Email" class="input-field" required>
+      
+      <label for="password">Password</label>
+      <input id="password" type="password" name="password" placeholder="Password" class="input-field" required>
+      
       <button type="submit" class="liquid-btn w-full">Register</button>
       <div id="reg-error" class="text-red-400"></div>
     </form>
-  </div>`;
+    </div>`;
   document.getElementById('reg-form').onsubmit = async e=>{
     e.preventDefault();
     const f = e.target;
