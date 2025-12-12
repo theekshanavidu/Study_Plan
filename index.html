@@ -3,9 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Study Tracker Mega Version</title>
+<title>Study Tracker</title>
+<link rel="icon" type="image/png" href="https://img.freepik.com/premium-vector/reading-owl-logo-simple-vector-design_609149-1053.jpg?semt=ais_hybrid&w=740&q=80">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+
 
 <!-- Firebase -->
 <script type="module">
@@ -59,6 +63,8 @@ function renderHeader(){
   if(currentUser){
     const homeBtn = createLiquidButton("Home",()=>renderHome());
     const profileBtn = createLiquidButton("Profile",()=>renderProfile());
+    const timetableBtn = createLiquidButton("Time Table", ()=>renderTimetable());
+    headerButtons.appendChild(timetableBtn);
     headerButtons.appendChild(homeBtn);
     headerButtons.appendChild(profileBtn);
 
@@ -340,6 +346,180 @@ async function renderProfile(){
   };
 }
 
+
+async function renderTimetable() {
+  if (!currentUser) { alert("Please login to access Time Table."); return; }
+
+  const ttRef = doc(db, "timetable", currentUser.uid);
+  const ttSnap = await getDoc(ttRef);
+  const savedData = ttSnap.exists() ? ttSnap.data() : {};
+
+  const days = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+  const hours = Array.from({length:24}, (_,i)=>{
+    const fmt = (hr)=> { const suffix = hr < 12 ? "am" : "pm"; const h = hr%12||12; return `${h}${suffix}`; };
+    return `${fmt(i)} - ${fmt(i+1)}`;
+  });
+
+  appContainer.innerHTML = `
+    <div class="bg-slate-800 p-4 rounded-xl w-full flex flex-col gap-4">
+      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+        <h2 class="text-2xl font-bold">Weekly Time Table</h2>
+        <div class="flex flex-wrap gap-2">
+          <button id="tt-fill-free" class="liquid-btn">Fill "Free"</button>
+          <button id="tt-clear" class="liquid-btn">Clear All</button>
+          <button id="save-timetable" class="liquid-btn">Save Time Table</button>
+          <button id="export-pdf" class="liquid-btn">Export PDF</button>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table id="tt-table" class="w-full border border-slate-600 text-sm table-auto">
+          <thead>
+            <tr>
+              <th class="border p-2">Hour</th>
+              ${days.map(d=>`<th class="border p-2">${d}</th>`).join("")}
+            </tr>
+          </thead>
+          <tbody>
+            ${hours.map((h, hourIndex)=>{
+              return `<tr>
+                <td class="border p-2">${h}</td>
+                ${days.map((day, dayIndex)=>{
+                  const cellId = `tt_${dayIndex}_${hourIndex}`;
+                  const val = (savedData && savedData[cellId]) ? savedData[cellId] : "";
+                  return `<td class="border p-1">
+                    <input id="${cellId}" class="bg-slate-900 p-1 rounded w-full" placeholder="Subject / Free" value="${val}">
+                  </td>`;
+                }).join("")}
+              </tr>`;
+            }).join("")}
+          </tbody>
+        </table>
+      </div>
+
+      <div id="tt-msg" class="text-green-400 mt-2"></div>
+    </div>
+
+    <div class="hidden md:block mt-6">
+      <h2 class="text-2xl font-bold">Weekly Chart</h2>
+      <canvas id="weekly-chart" class="bg-slate-800 rounded p-2 w-full" height="200"></canvas>
+
+      <h2 class="text-2xl font-bold mt-6">Monthly Chart</h2>
+      <canvas id="monthly-chart" class="bg-slate-800 rounded p-2 w-full" height="200"></canvas>
+    </div>
+  `;
+
+  // ---------- Fill Free ----------
+  document.getElementById("tt-fill-free").onclick = ()=> {
+    days.forEach((_,d)=> hours.forEach((_,h)=>{
+      const el = document.getElementById(`tt_${d}_${h}`);
+      if(el && el.value.trim()==="") el.value="Free";
+    }));
+  };
+
+  // ---------- Clear All ----------
+  document.getElementById("tt-clear").onclick = ()=> {
+    if(!confirm("Clear all timetable entries?")) return;
+    days.forEach((_,d)=> hours.forEach((_,h)=>{
+      const el = document.getElementById(`tt_${d}_${h}`);
+      if(el) el.value="";
+    }));
+    document.getElementById("tt-msg").textContent = "Cleared (not saved). Press Save to persist.";
+  };
+
+  // ---------- Save ----------
+  document.getElementById("save-timetable").onclick = async ()=>{
+    const saveObj = {};
+    days.forEach((_,d)=> hours.forEach((_,h)=>{
+      const el = document.getElementById(`tt_${d}_${h}`);
+      if(el && el.value.trim()!=="") saveObj[`tt_${d}_${h}`] = el.value.trim();
+    }));
+    try{
+      await setDoc(ttRef, saveObj);
+      document.getElementById("tt-msg").textContent = "Time Table saved successfully!";
+    }catch(err){
+      document.getElementById("tt-msg").textContent = "Save failed: " + err.message;
+    }
+    renderCharts();
+  };
+
+  // ---------- Render Charts ----------
+  async function renderCharts(){
+    const snap = await getDocs(query(collection(db,'studyLogs'), where('userId','==',currentUser.uid)));
+    const data = snap.docs.map(d=>d.data());
+    const weekly=[], monthly={};
+    const today=new Date();
+    for(let i=6;i>=0;i--){
+      const d=new Date(); d.setDate(today.getDate()-i);
+      const ds=d.toISOString().slice(0,10);
+      weekly.push(data.filter(x=>x.date===ds).reduce((a,b)=>a+b.hours,0));
+    }
+    data.forEach(x=>{
+      const month=x.date.slice(0,7);
+      monthly[month]=(monthly[month]||0)+x.hours;
+    });
+
+    const weeklyCanvas = document.getElementById('weekly-chart');
+    if(weeklyCanvas){
+      const ctxW = weeklyCanvas.getContext('2d');
+      window.weeklyChart?.destroy();
+      window.weeklyChart = new Chart(ctxW,{type:'line',data:{labels:Array.from({length:7},(_,i)=>{const d=new Date(); d.setDate(today.getDate()-6+i); return d.toISOString().slice(5,10);}), datasets:[{label:'Hours',data:weekly,borderColor:'#8b5cf6', backgroundColor:'rgba(139,92,246,0.3)',fill:true}]} , options:{responsive:true, plugins:{legend:{labels:{color:'#fff'}}}, scales:{x:{ticks:{color:'#fff'}}, y:{ticks:{color:'#fff'}}}}});
+    }
+
+    const monthlyCanvas = document.getElementById('monthly-chart');
+    if(monthlyCanvas){
+      const ctxM = monthlyCanvas.getContext('2d');
+      window.monthlyChart?.destroy();
+      window.monthlyChart = new Chart(ctxM,{type:'line', data:{labels:Object.keys(monthly), datasets:[{label:'Hours',data:Object.values(monthly),borderColor:'#22d3ee',backgroundColor:'rgba(34,211,238,0.3)',fill:true}]} , options:{responsive:true,plugins:{legend:{labels:{color:'#fff'}}}, scales:{x:{ticks:{color:'#fff'}}, y:{ticks:{color:'#fff'}}}}});
+    }
+  }
+
+  renderCharts();
+
+  // ---------- Export PDF ----------
+  document.getElementById("export-pdf").onclick = () => {
+    const pdf = new jspdf.jsPDF('p', 'pt', 'a4');
+
+    // Table Data
+    const tableData = [];
+    hours.forEach((h, hourIndex)=>{
+      const row = [h];
+      days.forEach((_, dayIndex)=>{
+        const val = document.getElementById(`tt_${dayIndex}_${hourIndex}`).value.trim();
+        row.push(val || "");
+      });
+      tableData.push(row);
+    });
+
+    pdf.autoTable({
+      head: [['Hour', ...days]],
+      body: tableData,
+      theme: 'grid',
+      styles: { fontSize: 10, cellPadding: 4 },
+      headStyles: { fillColor: [30,41,59], textColor: 255 },
+      alternateRowStyles: { fillColor: [50,50,50] },
+      margin: { left: 20, right: 20 }
+    });
+
+    const weeklyCanvas = document.getElementById('weekly-chart');
+    const monthlyCanvas = document.getElementById('monthly-chart');
+    if(weeklyCanvas){
+      const weeklyImg = weeklyCanvas.toDataURL('image/png');
+      pdf.addImage(weeklyImg, 'PNG', 40, pdf.lastAutoTable.finalY + 20, 520, 200);
+    }
+    if(monthlyCanvas){
+      const monthlyImg = monthlyCanvas.toDataURL('image/png');
+      pdf.addPage();
+      pdf.addImage(monthlyImg, 'PNG', 40, 40, 520, 200);
+    }
+
+    pdf.save(`timetable_${currentUser.uid}.pdf`);
+  };
+}
+
+
+
+
 // ---------- Admin Panel ----------
 async function renderAdmin(){
   if(!currentUser || currentUser.uid!==ADMIN_UID){ alert("Access Denied"); return; }
@@ -439,6 +619,7 @@ async function deleteAdminUser(uid,name){
 // <-- FIX: Attach to window for inline onclick -->
 window.renderAdminUserDetails = renderAdminUserDetails;
 window.deleteAdminUser = deleteAdminUser;
+window.renderTimetable = renderTimetable;
 
 </script>
 
