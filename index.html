@@ -15,7 +15,8 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, onAuthStateChanged, signOut, updateProfile, updateEmail } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, addDoc, collection, getDocs, getDoc, query, where, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, addDoc, collection, getDocs, getDoc, query, where, updateDoc, deleteDoc, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
 
 const firebaseConfig = {
     apiKey: "AIzaSyDYhulc8Qz_xGfIeb1g9A6BGO2wwbrz82M",
@@ -201,6 +202,9 @@ function renderLogin(){
 async function renderHome(){
   appContainer.innerHTML = `
   <div class="space-y-4 w-full max-w-xl mx-auto">
+    <button id="recording-btn" class="liquid-btn w-full text-xl py-4 mb-4">
+  🎥 Recordings
+</button>
     <h2 class="text-2xl font-bold">Daily Entry</h2>
 
     <!-- Save Today's Entry -->
@@ -227,6 +231,7 @@ async function renderHome(){
   </div>`;
 
   // ---------- Add / Save Entry ----------
+    
   document.getElementById('daily-form').onsubmit = async e=>{
     e.preventDefault();
     const f = e.target;
@@ -244,6 +249,10 @@ async function renderHome(){
     }
     renderCharts();
   };
+document.getElementById("recording-btn").onclick = () => {
+  renderSubjects();
+};
+
 
   // ---------- Update Entry ----------
   document.getElementById('update-today-form').onsubmit = async e=>{
@@ -291,6 +300,7 @@ async function renderCharts(){
   const ctxM = document.getElementById('monthly-chart').getContext('2d');
   new Chart(ctxM,{type:'line', data:{labels:Object.keys(monthly), datasets:[{label:'Hours',data:Object.values(monthly),borderColor:'#22d3ee',backgroundColor:'rgba(34,211,238,0.3)',fill:true}]} , options:{responsive:true,plugins:{legend:{labels:{color:'#fff'}}}, scales:{x:{ticks:{color:'#fff'}}, y:{ticks:{color:'#fff'}}}}});
 }
+
 
 // ---------- Profile ----------
 async function renderProfile(){
@@ -517,6 +527,285 @@ async function renderTimetable() {
   };
 }
 
+function renderSubjects(){
+  appContainer.innerHTML = `
+    <h2 class="text-2xl font-bold mb-6">Select Subject</h2>
+
+    <div class="flex flex-col gap-4">
+      ${subjectBtn(
+        "Combine Maths - Ruwan Darshana",
+        "https://api.combinedmaths.lk/files-public/profiles/281124/1862199793225306112.jpg",
+        "maths"
+      )}
+
+      ${subjectBtn(
+        "Physics - Anuradha Perera",
+        "https://static.indeepa.lk/lecturer/7/en/652248466c448.jpg",
+        "physics"
+      )}
+
+      ${subjectBtn(
+        "Chemistry - Amila Dasanayake",
+        "https://results.echem.lk/assets/website/2024/assets/images/about/about-v1-img1.webp",
+        "chemistry"
+      )}
+    </div>
+  `;
+}
+
+function subjectBtn(title,img,subject){
+  return `
+    <button onclick="renderType('${subject}')"
+      class="flex items-center gap-4 bg-slate-800 p-4 rounded-xl hover:bg-slate-700">
+      <img src="${img}" class="w-24 h-24 rounded-xl object-cover">
+      <span class="text-xl font-bold">${title}</span>
+    </button>
+  `;
+}
+
+function renderType(subject){
+  appContainer.innerHTML = `
+    <h2 class="text-2xl font-bold mb-6">${subject.toUpperCase()}</h2>
+
+    <div class="flex gap-6">
+      <button class="liquid-btn text-xl px-8 py-4" id="btn-theory">
+        Theory
+      </button>
+
+      <button class="liquid-btn text-xl px-8 py-4" id="btn-revision">
+        Revision
+      </button>
+    </div>
+  `;
+
+  document.getElementById("btn-theory")
+    .addEventListener("click", ()=> renderLessons(subject,"theory"));
+
+  document.getElementById("btn-revision")
+    .addEventListener("click", ()=> renderLessons(subject,"revision"));
+}
+
+
+async function renderLessons(subject, type){
+
+  appContainer.innerHTML = `
+    <h2 class="text-2xl font-bold mb-4">
+      ${subject.toUpperCase()} - ${type.toUpperCase()}
+    </h2>
+
+    <div id="lessons-list" class="flex flex-col gap-3"></div>
+  `;
+
+  const list = document.getElementById("lessons-list");
+
+  // 1️⃣ Load Firestore data (optional)
+  let lessonsData = {};
+  try{
+    const snap = await getDocs(
+      query(
+        collection(db,"lessons"),
+        where("subject","==",subject),
+        where("type","==",type)
+      )
+    );
+
+    snap.forEach(doc=>{
+      const d = doc.data();
+      lessonsData[d.day] = d.title;
+    });
+  }catch(err){
+    console.warn("No lessons yet, using defaults");
+  }
+
+  // 2️⃣ ALWAYS render 20 buttons
+  for(let i=1;i<=20;i++){
+    const day = String(i).padStart(2,"0");
+    const title = lessonsData[day] || `Day ${day} - Lesson Title`;
+
+    const row = document.createElement("div");
+    row.className = "flex gap-2 items-center";
+
+    const lessonBtn = document.createElement("button");
+    lessonBtn.className = "liquid-btn flex-1";
+    lessonBtn.id = `lesson-btn-${i}`;
+    lessonBtn.textContent = title;
+
+    row.appendChild(lessonBtn);
+    lessonBtn.onclick = ()=>{
+  openLessonPage(subject, type, day);
+};
+
+
+
+    // ✏️ Admin only
+    if(currentUser && currentUser.uid === ADMIN_UID){
+      const editBtn = document.createElement("button");
+      editBtn.className = "liquid-btn bg-yellow-500";
+      editBtn.textContent = "✏️";
+      editBtn.onclick = ()=> renameLesson(i, subject, type);
+      row.appendChild(editBtn);
+    }
+
+    list.appendChild(row);
+  }
+}
+
+
+
+async function renameLesson(i, subject, type){
+  if(currentUser.uid !== ADMIN_UID){
+    alert("Only admin can rename lessons.");
+    return;
+  }
+
+  const day = String(i).padStart(2, "0");
+  const docId = `${subject}_${type}_${day}`;
+  const btn = document.getElementById(`lesson-btn-${i}`);
+  const current = btn.textContent;
+
+  const newName = prompt("New lesson name:", current);
+  if(!newName) return;
+
+  // Update button immediately
+  btn.textContent = newName;
+
+  // Save to Firestore
+  await setDoc(doc(db, "lessons", docId), {
+    title: newName,
+    subject,
+    type,
+    day
+  });
+}
+
+// attach to window for inline calls (if needed)
+window.renameLesson = renameLesson;
+
+
+
+async function openLessonPage(subject, type, day){
+  const lessonId = `${subject}_${type}_${day}`;
+
+  appContainer.innerHTML = `
+    <h2 class="text-2xl font-bold mb-4">Lesson ${day}</h2>
+    <div id="content-list" class="flex flex-col gap-3 mb-6"></div>
+
+    ${currentUser?.uid === ADMIN_UID ? `
+      <div class="flex gap-2">
+        <input id="content-text" placeholder="Text" class="border p-2 flex-1 text-black">
+        <input id="content-link" placeholder="Link" class="border p-2 flex-1 text-black">
+        <button id="add-content-btn" class="liquid-btn">Add</button>
+      </div>
+    ` : ``}
+  `;
+
+  // Load existing contents
+  loadLessonContents(lessonId);
+
+  // Event listener attach කරන්න – DOM render වුනාම
+  if(currentUser?.uid === ADMIN_UID){
+    document.getElementById("add-content-btn")
+      .addEventListener("click", () => addContent(lessonId));
+  }
+}
+
+
+async function loadLessonContents(lessonId){
+  const list = document.getElementById("content-list");
+  list.innerHTML = "";
+
+  const q = query(
+    collection(db,"lessonContents"),
+    where("lessonId","==",lessonId),
+    orderBy("order","asc")
+  );
+
+  const snap = await getDocs(q);
+
+  snap.forEach(docSnap=>{
+    const d = docSnap.data();
+    const id = docSnap.id;
+
+    list.innerHTML += `
+      <div class="border p-3 flex justify-between items-center">
+        <a href="${d.link}" target="_blank" class="text-blue-600 underline">
+          ${d.text}
+        </a>
+
+        ${currentUser?.uid === ADMIN_UID ? `
+          <div class="flex gap-2">
+            <button onclick="moveContent('${id}',-1)">⬆️</button>
+            <button onclick="moveContent('${id}',1)">⬇️</button>
+            <button onclick="deleteContent('${id}')">🗑️</button>
+          </div>
+        ` : ``}
+      </div>
+    `;
+  });
+}
+
+
+async function addContent(lessonId){
+  const text = document.getElementById("content-text").value.trim();
+  const link = document.getElementById("content-link").value.trim();
+  if(!text || !link) return alert("Fill all fields");
+
+  const snap = await getDocs(
+    query(collection(db,"lessonContents"), where("lessonId","==",lessonId))
+  );
+
+  await addDoc(collection(db,"lessonContents"),{
+    lessonId,
+    text,
+    link,
+    order: snap.size + 1,
+    createdAt: Date.now()
+  });
+
+  document.getElementById("content-text").value = "";
+  document.getElementById("content-link").value = "";
+
+  await loadLessonContents(lessonId); // 🔹 make sure to await
+}
+
+
+
+async function deleteContent(id){
+  if(!confirm("Delete?")) return;
+  await deleteDoc(doc(db,"lessonContents",id));
+  location.reload();
+}
+
+
+
+async function moveContent(id,dir){
+  const ref = doc(db,"lessonContents",id);
+  const snap = await getDoc(ref);
+  if(!snap.exists()) return;
+
+  const d = snap.data();
+  const newOrder = d.order + dir;
+  if(newOrder < 1) return;
+
+  const q = query(
+    collection(db,"lessonContents"),
+    where("lessonId","==",d.lessonId),
+    where("order","==",newOrder)
+  );
+
+  const swap = await getDocs(q);
+  if(swap.empty) return;
+
+  await updateDoc(ref,{order:newOrder});
+  await updateDoc(doc(db,"lessonContents",swap.docs[0].id),{order:d.order});
+
+  loadLessonContents(d.lessonId);
+}
+
+
+
+
+
 
 
 
@@ -525,6 +814,24 @@ async function renderAdmin(){
   if(!currentUser || currentUser.uid!==ADMIN_UID){ alert("Access Denied"); return; }
   appContainer.innerHTML = `
   <h2 class="text-2xl font-bold mb-4">Admin Panel</h2>
+    <h3 class="text-xl font-bold mt-6">Add Recording</h3>
+
+<input id="rec-title" class="input-field" placeholder="Title (දෛශික)">
+<input id="rec-link" class="input-field" placeholder="https://link">
+
+<select id="rec-subject" class="input-field">
+  <option value="maths">Maths</option>
+  <option value="physics">Physics</option>
+  <option value="chemistry">Chemistry</option>
+</select>
+
+<select id="rec-type" class="input-field">
+  <option value="theory">Theory</option>
+  <option value="revision">Revision</option>
+</select>
+
+<button class="liquid-btn" onclick="addRecording()">Add</button>
+
   <div id="admin-users" class="space-y-2"></div>
   <div id="admin-user-details" class="mt-6"></div>`;
 
@@ -570,6 +877,7 @@ async function renderAdminUserDetails(uid){
     const month=x.date.slice(0,7);
     monthly[month]=(monthly[month]||0)+x.hours;
   });
+    
 
   detailsContainer.innerHTML = `
   <div class="bg-slate-800 p-4 rounded space-y-3 max-w-xl">
@@ -615,11 +923,55 @@ async function deleteAdminUser(uid,name){
     renderAdmin();
   }
 }
+ 
+async function addRecording(){
+  const title = document.getElementById("rec-title").value.trim();
+  const link = document.getElementById("rec-link").value.trim();
+  const subject = document.getElementById("rec-subject").value;
+  const type = document.getElementById("rec-type").value;
+
+  if(!title || !link){
+    alert("Title සහ Link දෙකම දාන්න");
+    return;
+  }
+
+  await addDoc(collection(db,"recordings"),{
+    title,
+    link,
+    subject,
+    type,
+    createdAt: new Date().toISOString()
+  });
+
+  alert("Recording Added!");
+
+  // Clear inputs
+  document.getElementById("rec-title").value = "";
+  document.getElementById("rec-link").value = "";
+
+  // Optionally, render lessons immediately if current subject/type matches
+  renderLessons(subject,type);
+}
+
 
 // <-- FIX: Attach to window for inline onclick -->
 window.renderAdminUserDetails = renderAdminUserDetails;
 window.deleteAdminUser = deleteAdminUser;
 window.renderTimetable = renderTimetable;
+// ---------- FIX RECORDING BUTTONS ----------
+window.renderSubjects = renderSubjects;
+window.renderType = renderType;
+window.renderLessons = renderLessons;
+window.deleteRecording = deleteRecording;
+window.renameLesson = renameLesson;
+window.renderType = renderType;
+window.moveContent = moveContent;
+window.addContent = addContent;
+window.deleteContent = deleteContent;
+window.deleteRecording = deleteRecording;
+
+
+
 
 </script>
 
