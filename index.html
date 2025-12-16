@@ -279,26 +279,63 @@ document.getElementById("recording-btn").onclick = () => {
 }
 
 // ---------- Charts ----------
-async function renderCharts(){
-  const snap = await getDocs(query(collection(db,'studyLogs'), where('userId','==',currentUser.uid)));
+async function renderCharts(userId = currentUser.uid){
+  const snap = await getDocs(query(collection(db,'studyLogs'), where('userId','==',userId)));
   const data = snap.docs.map(d=>d.data());
   const weekly=[], monthly={};
-  const today=new Date();
+  const today = new Date();
+
+  // Weekly aggregation (last 7 days)
   for(let i=6;i>=0;i--){
-    const d=new Date(); d.setDate(today.getDate()-i);
-    const ds=d.toISOString().slice(0,10);
+    const d = new Date();
+    d.setDate(today.getDate()-i);
+    const ds = d.toISOString().slice(0,10);
     weekly.push(data.filter(x=>x.date===ds).reduce((a,b)=>a+b.hours,0));
   }
+
+  // Monthly aggregation
   data.forEach(x=>{
-    const month=x.date.slice(0,7);
-    monthly[month]=(monthly[month]||0)+x.hours;
+    const month = x.date.slice(0,7); // e.g. "2025-12"
+    monthly[month] = (monthly[month] || 0) + x.hours;
   });
 
-  const ctxW = document.getElementById('weekly-chart').getContext('2d');
-  new Chart(ctxW,{type:'line',data:{labels:Array.from({length:7},(_,i)=>{const d=new Date(); d.setDate(today.getDate()-6+i); return d.toISOString().slice(5,10);}), datasets:[{label:'Hours',data:weekly,borderColor:'#8b5cf6', backgroundColor:'rgba(139,92,246,0.3)', fill:true}]} , options:{responsive:true, plugins:{legend:{labels:{color:'#fff'}}}, scales:{x:{ticks:{color:'#fff'}}, y:{ticks:{color:'#fff'}}}}});
+  // Sort months chronologically
+  const months = Object.keys(monthly).sort((a,b)=>{
+    const [yearA, monthA] = a.split('-').map(Number);
+    const [yearB, monthB] = b.split('-').map(Number);
+    return yearA === yearB ? monthA - monthB : yearA - yearB;
+  });
+  const values = months.map(m => monthly[m]);
 
-  const ctxM = document.getElementById('monthly-chart').getContext('2d');
-  new Chart(ctxM,{type:'line', data:{labels:Object.keys(monthly), datasets:[{label:'Hours',data:Object.values(monthly),borderColor:'#22d3ee',backgroundColor:'rgba(34,211,238,0.3)',fill:true}]} , options:{responsive:true,plugins:{legend:{labels:{color:'#fff'}}}, scales:{x:{ticks:{color:'#fff'}}, y:{ticks:{color:'#fff'}}}}});
+  // ---------- Weekly chart ----------
+  const ctxW = document.getElementById('weekly-chart');
+  if(ctxW){
+    const ctx = ctxW.getContext('2d');
+    window.weeklyChart?.destroy();
+    window.weeklyChart = new Chart(ctx,{
+      type:'line',
+      data:{
+        labels:Array.from({length:7},(_,i)=>{const d=new Date(); d.setDate(today.getDate()-6+i); return d.toISOString().slice(5,10);}),
+        datasets:[{label:'Hours', data:weekly, borderColor:'#8b5cf6', backgroundColor:'rgba(139,92,246,0.3)', fill:true}]
+      },
+      options:{responsive:true, plugins:{legend:{labels:{color:'#fff'}}}, scales:{x:{ticks:{color:'#fff'}}, y:{ticks:{color:'#fff'}}}}
+    });
+  }
+
+  // ---------- Monthly chart ----------
+  const ctxM = document.getElementById('monthly-chart');
+  if(ctxM){
+    const ctx = ctxM.getContext('2d');
+    window.monthlyChart?.destroy();
+    window.monthlyChart = new Chart(ctx,{
+      type:'line',
+      data:{
+        labels:months,
+        datasets:[{label:'Hours', data:values, borderColor:'#22d3ee', backgroundColor:'rgba(34,211,238,0.3)', fill:true}]
+      },
+      options:{responsive:true, plugins:{legend:{labels:{color:'#fff'}}}, scales:{x:{ticks:{color:'#fff'}}, y:{ticks:{color:'#fff'}}}}
+    });
+  }
 }
 
 
