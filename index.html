@@ -14,8 +14,21 @@
 <!-- Firebase -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, onAuthStateChanged, signOut, updateProfile, updateEmail } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  onAuthStateChanged,
+  signOut,
+  updateProfile,
+  updateEmail,
+  GoogleAuthProvider,
+  signInWithPopup
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, doc, setDoc, addDoc, collection, getDocs, getDoc, query, where, updateDoc, deleteDoc, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
 
 
 const firebaseConfig = {
@@ -29,6 +42,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const googleProvider = new GoogleAuthProvider();
 const ADMIN_UID = "m1rddMA36WbVunFW3B0BzuqOwyI2";
 
 let currentUser = null;
@@ -147,6 +161,11 @@ function renderRegister(){
       <button type="submit" class="liquid-btn w-full">Register</button>
       <div id="reg-error" class="text-red-400"></div>
     </form>
+        <button class="google-btn w-full mt-3" id="google-register">
+     <img src="https://img.freepik.com/premium-vector/google-logo-icon-transparent-background_1273375-1570.jpg?semt=ais_hybrid&w=740&q=80" class="google-logo" alt="Google logo">
+     Continue with Google
+       </button>
+
     </div>`;
   document.getElementById('reg-form').onsubmit = async e=>{
     e.preventDefault();
@@ -166,23 +185,67 @@ function renderRegister(){
       });
     }catch(err){ document.getElementById('reg-error').textContent = err.message; }
   };
+   document.getElementById("google-register").onclick = async () => {
+  try {
+    const result = await signInWithPopup(auth, googleProvider);
+    const user = result.user;
+
+    const ref = doc(db, "users", user.uid);
+    const snap = await getDoc(ref);
+
+    if (!snap.exists()) {
+      // පරිශීලකයා database එකේ නැතිනම් → Complete Profile form
+      document.getElementById("reg-form").style.display = "none";  // Register form hide කරන්න
+      document.getElementById("complete-profile").style.display = "block";
+    } else {
+      // Already registered → Home page එකට යන්න
+      currentUser = user;
+      renderHome();
+    }
+  } catch (err) {
+    alert(err.message);
+  }
+};
 }
+
 
 // ---------- Login ----------
 function renderLogin(){
   appContainer.innerHTML = `
-  <div class="bg-slate-800 p-6 rounded-xl w-full max-w-md mx-auto space-y-3">
-    <h2 class="text-2xl font-bold">Login</h2>
-    <form id="login-form" class="flex flex-col gap-2">
-      <input type="email" name="email" placeholder="Email" class="input-field" required>
-      <input type="password" name="password" placeholder="Password" class="input-field" required>
-      <div class="flex justify-between items-center mt-2">
-        <button type="submit" class="liquid-btn">Login</button>
-        <button type="button" id="forgot-pass" class="text-sm text-slate-300">Forgot?</button>
-      </div>
-      <div id="login-error" class="text-red-400"></div>
-    </form>
-  </div>`;
+  <div id="auth-section" class="bg-slate-800 p-6 rounded-xl w-full max-w-md mx-auto space-y-3">
+  
+  <h2 class="text-2xl font-bold">Login</h2>
+
+  <form id="login-form" class="flex flex-col gap-2">
+    <input type="email" name="email" placeholder="Email" class="input-field" required>
+    <input type="password" name="password" placeholder="Password" class="input-field" required>
+
+    <div class="flex justify-between items-center mt-2">
+      <button type="submit" class="liquid-btn">Login</button>
+      <button type="button" id="forgot-pass" class="text-sm text-slate-300">Forgot?</button>
+    </div>
+
+    <div id="login-error" class="text-red-400"></div>
+  </form>
+    <button id="google-login" class="google-btn">
+  <img src="https://img.freepik.com/premium-vector/google-logo-icon-transparent-background_1273375-1570.jpg?semt=ais_hybrid&w=740&q=80" alt="Google" class="google-logo">
+  Continue with Google
+</button>
+
+
+
+  <!-- 👇 COMPLETE PROFILE INSIDE -->
+  <div id="complete-profile" style="display:none" class="mt-4 space-y-2">
+    <h2 class="text-xl font-bold">Complete Your Profile</h2>
+    <input id="profile-name" placeholder="Full Name" class="input-field">
+    <input id="profile-class" placeholder="Class / Grade" class="input-field">
+    <input id="profile-school" placeholder="School" class="input-field">
+    <button onclick="saveProfile()" class="liquid-btn w-full">Save</button>
+  </div>
+
+</div>`;
+
+
   document.getElementById('login-form').onsubmit = async e=>{
     e.preventDefault();
     const f = e.target;
@@ -196,7 +259,45 @@ function renderLogin(){
       catch(err){ alert(err.message); }
     }
   };
+document.getElementById("google-login").onclick = async () => {
+  try {
+    const result = await signInWithPopup(auth, googleProvider);
+    const user = result.user;
+
+    const ref = doc(db, "users", user.uid);
+    const snap = await getDoc(ref);
+
+    if (!snap.exists()) {
+      document.getElementById("login-form").style.display = "none";
+      document.getElementById("complete-profile").style.display = "block";
+    } else {
+      // පරිශීලකයා database එකේ තියෙනවා නම් Home එකට යන්න
+      renderHome();
+    }
+  } catch (err) {
+    alert(err.message);
+  }
+};
 }
+
+async function saveProfile(){
+  const name = document.getElementById("profile-name").value.trim();
+  const school = document.getElementById("profile-school").value.trim();
+  const user = auth.currentUser;
+  if(!user) return;
+
+  await setDoc(doc(db,"users",user.uid), {
+    displayName: name,
+    school,
+    createdAt: new Date().toISOString()
+  });
+
+  await updateProfile(user, { displayName: name });
+
+  alert("Profile saved!");
+  renderHome();
+}
+
 
 // ---------- Home ----------
 async function renderHome(){
@@ -1019,6 +1120,29 @@ body{background:black;color:white;min-height:100vh;}
 .liquid-btn::before{content:"";position:absolute;top:0;left:-100%;width:100%;height:100%;background:rgba(255,255,255,0.2);transform:skewX(-20deg);transition:0.5s;}
 .liquid-btn:hover::before{left:100%;}
 .liquid-btn:hover{box-shadow:0 0 20px #0ea5e9;}
+.google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0.5rem 1.5rem;
+  border: 2px solid #0ea5e9;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.3s;
+}
+.google-btn:hover {
+  background: rgba(14, 165, 233, 0.1);
+  box-shadow: 0 0 10px #0ea5e9;
+}
+.google-logo {
+  width: 20px;
+  height: 20px;
+}
+
 </style>
 </head>
 <body class="flex flex-col items-center justify-start p-4 min-h-screen">
