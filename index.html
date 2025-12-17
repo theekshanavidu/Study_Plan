@@ -702,26 +702,29 @@ function renderSubjects(){
     <h2 class="text-2xl font-bold mb-6">Select Subject</h2>
 
     <div class="flex flex-col gap-4">
-      ${subjectBtn(
-        "Combine Maths - Ruwan Darshana",
-        "https://api.combinedmaths.lk/files-public/profiles/281124/1862199793225306112.jpg",
-        "maths"
-      )}
+      <button id="btn-maths" class="flex items-center gap-4 bg-slate-800 p-4 rounded-xl hover:bg-slate-700">
+        <img src="https://api.combinedmaths.lk/files-public/profiles/281124/1862199793225306112.jpg" class="w-24 h-24 rounded-xl object-cover">
+        <span class="text-xl font-bold">Combine Maths - Ruwan Darshana</span>
+      </button>
 
-      ${subjectBtn(
-        "Physics - Anuradha Perera",
-        "https://static.indeepa.lk/lecturer/7/en/652248466c448.jpg",
-        "physics"
-      )}
+      <button id="btn-physics" class="flex items-center gap-4 bg-slate-800 p-4 rounded-xl hover:bg-slate-700">
+        <img src="https://static.indeepa.lk/lecturer/7/en/652248466c448.jpg" class="w-24 h-24 rounded-xl object-cover">
+        <span class="text-xl font-bold">Physics - Anuradha Perera</span>
+      </button>
 
-      ${subjectBtn(
-        "Chemistry - Amila Dasanayake",
-        "https://results.echem.lk/assets/website/2024/assets/images/about/about-v1-img1.webp",
-        "chemistry"
-      )}
+      <button id="btn-chemistry" class="flex items-center gap-4 bg-slate-800 p-4 rounded-xl hover:bg-slate-700">
+        <img src="https://static.indeepa.lk/lecturer/6/en/6522475ddf2bf.jpg" class="w-24 h-24 rounded-xl object-cover">
+        <span class="text-xl font-bold">Chemistry - Amila Dasanayake</span>
+      </button>
     </div>
   `;
+
+  // 🔹 Attach click events
+  document.getElementById("btn-maths").onclick = () => renderType("maths");
+  document.getElementById("btn-physics").onclick = () => renderType("physics");
+  document.getElementById("btn-chemistry").onclick = () => renderType("chemistry");
 }
+
 
 function subjectBtn(title,img,subject){
   return `
