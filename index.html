@@ -222,6 +222,18 @@ function renderLogin(){
   </div>
 
 </div>`;
+document.getElementById('login-form').onsubmit = async e=>{
+  e.preventDefault();
+  const f = e.target;
+  try{
+    const cred = await signInWithEmailAndPassword(auth,f.email.value,f.password.value);
+    currentUser = cred.user;       // ✅ update currentUser
+    renderHeader();                // ✅ update header buttons
+    renderHome();                  // ✅ redirect to Home
+  }catch(err){ 
+    document.getElementById('login-error').textContent = err.message; 
+  }
+};
 
 
   document.getElementById("google-login").onclick = async () => {
