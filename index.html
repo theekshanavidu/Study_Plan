@@ -185,49 +185,7 @@ function renderRegister(){
       });
     }catch(err){ document.getElementById('reg-error').textContent = err.message; }
   };
-   // ---------- Google Register ----------
-window.addEventListener('DOMContentLoaded', () => {
-  const googleBtn = document.getElementById("google-register");
-  if (googleBtn) {
-    googleBtn.onclick = async () => {
-      const regForm = document.getElementById("reg-form");
-      const completeProfile = document.getElementById("complete-profile");
-
-      if (!regForm || !completeProfile) {
-        return alert("Form elements not found in DOM");
-      }
-
-      try {
-        const result = await signInWithPopup(auth, googleProvider);
-        const user = result.user;
-
-        const ref = doc(db, "users", user.uid);
-        const snap = await getDoc(ref);
-
-        if (!snap.exists()) {
-          regForm.style.display = "none";
-          completeProfile.style.display = "block";
-
-          // pre-fill fields
-          document.getElementById("profile-name").value = user.displayName || "";
-          document.getElementById("profile-school").value = "";
-          document.getElementById("profile-class").value = "";
-
-          window.saveProfile = async () => {
-            // save profile code here...
-          };
-
-        } else {
-          currentUser = user;
-          renderHome();
-        }
-      } catch (err) {
-        alert(err.message);
-      }
-    };
-  }
-});
-}
+ }
 
 // ---------- Login ----------
 function renderLogin(){
@@ -266,24 +224,12 @@ function renderLogin(){
 </div>`;
 
 
-  document.getElementById('login-form').onsubmit = async e=>{
-    e.preventDefault();
-    const f = e.target;
-    try{ await signInWithEmailAndPassword(auth,f.email.value,f.password.value); }
-    catch(err){ document.getElementById('login-error').textContent = err.message; }
-  };
-  document.getElementById('forgot-pass').onclick = async ()=>{
-    const email = prompt('Enter your email to reset password:');
-    if(email){
-      try{ await sendPasswordResetEmail(auth,email); alert('Check your email'); }
-      catch(err){ alert(err.message); }
-    }
-  };
-document.getElementById("google-login").onclick = async () => {
+  document.getElementById("google-login").onclick = async () => {
   try {
     const result = await signInWithPopup(auth, googleProvider);
     const user = result.user;
 
+    // check if user profile exists in Firestore
     const ref = doc(db, "users", user.uid);
     const snap = await getDoc(ref);
 
@@ -293,14 +239,53 @@ document.getElementById("google-login").onclick = async () => {
       renderHome();
     } else {
       // New user → open complete profile form
-      document.getElementById("login-form").style.display = "none";
-      document.getElementById("complete-profile").style.display = "block";
+      renderLogin(); // ensure login page is rendered with complete-profile div
+      const completeProfile = document.getElementById("complete-profile");
+      const loginForm = document.getElementById("login-form");
 
-      // Prefill name and email from Google
+      if (!completeProfile || !loginForm) return;
+
+      loginForm.style.display = "none";
+      completeProfile.style.display = "block";
+
+      // prefill name and email from Google
       const displayName = user.displayName ? user.displayName.split(" ") : ["",""];
-      document.getElementById("profile-firstName").value = displayName[0] || "";
-      document.getElementById("profile-lastName").value = displayName[1] || "";
-      document.getElementById("profile-email").value = user.email || "";
+      completeProfile.innerHTML = `
+        <h2 class="text-xl font-bold">Complete Your Profile</h2>
+        <input id="profile-firstName" placeholder="First Name" class="input-field" value="${displayName[0]}">
+        <input id="profile-lastName" placeholder="Last Name" class="input-field" value="${displayName[1]}">
+        <input id="profile-email" placeholder="Email" class="input-field" value="${user.email}" readonly>
+        <input id="profile-birthday" type="date" class="input-field" placeholder="Birthday">
+        <input id="profile-phone" placeholder="Phone" class="input-field">
+        <input id="profile-school" placeholder="School" class="input-field">
+        <select id="profile-examYear" class="input-field">
+          <option>2026 A/L</option>
+          <option>2027 A/L</option>
+          <option>2028 A/L</option>
+        </select>
+        <button id="save-profile-btn" class="liquid-btn w-full">Save</button>
+      `;
+
+      // attach saveProfile
+      document.getElementById("save-profile-btn").onclick = async () => {
+        const data = {
+          firstName: document.getElementById("profile-firstName").value.trim(),
+          lastName: document.getElementById("profile-lastName").value.trim(),
+          email: user.email,
+          birthday: document.getElementById("profile-birthday").value,
+          phone: document.getElementById("profile-phone").value.trim(),
+          school: document.getElementById("profile-school").value.trim(),
+          examYear: document.getElementById("profile-examYear").value,
+          createdAt: new Date().toISOString()
+        };
+
+        await setDoc(doc(db, "users", user.uid), data);
+        await updateProfile(user, { displayName: `${data.firstName} ${data.lastName}` });
+
+        alert("Profile saved!");
+        currentUser = user;
+        renderHome();
+      };
     }
   } catch (err) {
     alert(err.message);
