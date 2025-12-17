@@ -978,77 +978,81 @@ async function moveContent(id,dir){
 
 
 
-
 // ---------- Admin Panel ----------
 async function renderAdmin(){
-  if(!currentUser || currentUser.uid!==ADMIN_UID){ alert("Access Denied"); return; }
+  if(!currentUser || currentUser.uid!==ADMIN_UID){ 
+    alert("Access Denied"); 
+    return; 
+  }
+
   appContainer.innerHTML = `
-  <h2 class="text-2xl font-bold mb-4">Admin Panel</h2>
-    <h3 class="text-xl font-bold mt-6">Add Recording</h3>
+    <h2 class="text-2xl font-bold mb-4">Admin Panel</h2>
+    <div id="admin-users" class="space-y-2"></div>
+    <div id="admin-user-details" class="mt-6"></div>
+  `;
 
-<input id="rec-title" class="input-field" placeholder="Title (දෛශික)">
-<input id="rec-link" class="input-field" placeholder="https://link">
-
-<select id="rec-subject" class="input-field">
-  <option value="maths">Maths</option>
-  <option value="physics">Physics</option>
-  <option value="chemistry">Chemistry</option>
-</select>
-
-<select id="rec-type" class="input-field">
-  <option value="theory">Theory</option>
-  <option value="revision">Revision</option>
-</select>
-
-<button class="liquid-btn" onclick="addRecording()">Add</button>
-
-  <div id="admin-users" class="space-y-2"></div>
-  <div id="admin-user-details" class="mt-6"></div>`;
-
+  // Fetch users
   const usersSnap = await getDocs(collection(db,'users'));
+  let users = usersSnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+
+  // Sort alphabetically by firstName
+  users.sort((a,b) => a.firstName.localeCompare(b.firstName));
+
   const usersContainer = document.getElementById('admin-users');
   usersContainer.innerHTML = '';
-  usersSnap.docs.forEach(docSnap=>{
-    const u = docSnap.data();
+
+  users.forEach(u => {
     const div = document.createElement('div');
     div.className = 'bg-slate-800 p-3 rounded flex justify-between items-center';
+
     div.innerHTML = `
       <div>
         <strong>${u.firstName} ${u.lastName}</strong> (${u.email})<br>
         School: ${u.school || '-'} • Exam: ${u.examYear || '-'}
       </div>
       <div class="flex gap-2">
-        <button class="liquid-btn text-white" onclick="renderAdminUserDetails('${docSnap.id}')">View</button>
-        <button class="liquid-btn text-white" onclick="deleteAdminUser('${docSnap.id}', '${u.firstName} ${u.lastName}')">Delete</button>
-      </div>`;
+        <button class="liquid-btn text-white view-btn">View</button>
+        <button class="liquid-btn text-white delete-btn">Delete</button>
+      </div>
+    `;
+
+    // Fix: add proper event listeners
+    div.querySelector('.view-btn').addEventListener('click', () => renderAdminUserDetails(u.id));
+    div.querySelector('.delete-btn').addEventListener('click', () => deleteAdminUser(u.id, `${u.firstName} ${u.lastName}`));
+
     usersContainer.appendChild(div);
   });
 }
 
 // ---------- Admin User Details + Charts ----------
-let adminWeeklyChart, adminMonthlyChart; // global variables
-
 async function renderAdminUserDetails(uid){
   const detailsContainer = document.getElementById('admin-user-details');
   const userSnap = await getDoc(doc(db,'users',uid));
   if(!userSnap.exists()){ detailsContainer.innerHTML='User not found'; return; }
   const u = userSnap.data();
+
   const logsSnap = await getDocs(query(collection(db,'studyLogs'), where('userId','==',uid)));
   const logs = logsSnap.docs.map(d=>d.data());
 
-  const weeklyData=[], today=new Date();
-  for(let i=6;i>=0;i--){
-    const d=new Date(); d.setDate(today.getDate()-i);
-    const ds=d.toISOString().slice(0,10);
-    weeklyData.push(logs.filter(x=>x.date===ds).reduce((a,b)=>a+b.hours,0));
-  }
-  const monthly={};
-  logs.forEach(x=>{
-    const month=x.date.slice(0,7);
-    monthly[month]=(monthly[month]||0)+x.hours;
-  });
-    
+  const today = new Date();
 
+  // ---------- Weekly Data ----------
+  const weeklyData = [];
+  for(let i=6;i>=0;i--){
+    const d = new Date(); d.setDate(today.getDate()-i);
+    const ds = d.toISOString().slice(0,10);
+    const dayHours = logs.filter(x=>x.date===ds).reduce((a,b)=>a+b.hours,0);
+    weeklyData.push(dayHours || 0);
+  }
+
+  // ---------- Monthly Data ----------
+  const monthly = {};
+  logs.forEach(x=>{
+    const month = x.date.slice(0,7);
+    monthly[month] = (monthly[month] || 0) + x.hours;
+  });
+
+  // ---------- Render HTML ----------
   detailsContainer.innerHTML = `
   <div class="bg-slate-800 p-4 rounded space-y-3 max-w-xl">
     <h3 class="text-xl font-bold">${u.firstName} ${u.lastName}</h3>
@@ -1065,26 +1069,53 @@ async function renderAdminUserDetails(uid){
     <canvas id="admin-monthly-chart" class="bg-slate-700 rounded p-2"></canvas>
   </div>`;
 
-  if(adminWeeklyChart) adminWeeklyChart.destroy();
-  if(adminMonthlyChart) adminMonthlyChart.destroy();
+  // ---------- Destroy old charts ----------
+  if(window.adminWeeklyChart) window.adminWeeklyChart.destroy();
+  if(window.adminMonthlyChart) window.adminMonthlyChart.destroy();
 
+  // ---------- Create Weekly Chart ----------
   const ctxW = document.getElementById('admin-weekly-chart').getContext('2d');
-  adminWeeklyChart = new Chart(ctxW,{
-    type:'line',
-    data:{
-      labels:Array.from({length:7},(_,i)=>{const d=new Date(); d.setDate(today.getDate()-6+i); return d.toISOString().slice(5,10);}),
-      datasets:[{label:'Hours',data:weeklyData,borderColor:'#8b5cf6',backgroundColor:'rgba(139,92,246,0.3)',fill:true}]
+  window.adminWeeklyChart = new Chart(ctxW, {
+    type: 'line',
+    data: {
+      labels: Array.from({length:7},(_,i)=>{const d=new Date(); d.setDate(today.getDate()-6+i); return d.toISOString().slice(5,10);}),
+      datasets: [{
+        label: 'Hours',
+        data: weeklyData,
+        borderColor: '#8b5cf6',
+        backgroundColor: 'rgba(139,92,246,0.3)',
+        fill: true
+      }]
     },
-    options:{responsive:true, plugins:{legend:{labels:{color:'#fff'}}}, scales:{x:{ticks:{color:'#fff'}}, y:{ticks:{color:'#fff'}}}}
+    options: {
+      responsive: true,
+      plugins: { legend: { labels: { color: '#fff' } } },
+      scales: { x: { ticks: { color: '#fff' } }, y: { ticks: { color: '#fff' } } }
+    }
   });
 
+  // ---------- Create Monthly Chart ----------
   const ctxM = document.getElementById('admin-monthly-chart').getContext('2d');
-  adminMonthlyChart = new Chart(ctxM,{
-    type:'line',
-    data:{labels:Object.keys(monthly), datasets:[{label:'Hours',data:Object.values(monthly),borderColor:'#22d3ee',backgroundColor:'rgba(34,211,238,0.3)',fill:true}]},
-    options:{responsive:true, plugins:{legend:{labels:{color:'#fff'}}}, scales:{x:{ticks:{color:'#fff'}}, y:{ticks:{color:'#fff'}}}}
+  window.adminMonthlyChart = new Chart(ctxM, {
+    type: 'line',
+    data: {
+      labels: Object.keys(monthly),
+      datasets: [{
+        label: 'Hours',
+        data: Object.values(monthly),
+        borderColor: '#22d3ee',
+        backgroundColor: 'rgba(34,211,238,0.3)',
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { labels: { color: '#fff' } } },
+      scales: { x: { ticks: { color: '#fff' } }, y: { ticks: { color: '#fff' } } }
+    }
   });
 }
+
 
 // ---------- Admin Delete ----------
 async function deleteAdminUser(uid,name){
@@ -1093,6 +1124,7 @@ async function deleteAdminUser(uid,name){
     renderAdmin();
   }
 }
+
  
 async function addRecording(){
   const title = document.getElementById("rec-title").value.trim();
@@ -1193,3 +1225,4 @@ body{background:black;color:white;min-height:100vh;}
 
 </body>
 </html>
+
