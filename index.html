@@ -186,59 +186,48 @@ function renderRegister(){
     }catch(err){ document.getElementById('reg-error').textContent = err.message; }
   };
    // ---------- Google Register ----------
-document.getElementById("google-register").onclick = async () => {
-  try {
-    const result = await signInWithPopup(auth, googleProvider);
-    const user = result.user;
+window.addEventListener('DOMContentLoaded', () => {
+  const googleBtn = document.getElementById("google-register");
+  if (googleBtn) {
+    googleBtn.onclick = async () => {
+      const regForm = document.getElementById("reg-form");
+      const completeProfile = document.getElementById("complete-profile");
 
-    const ref = doc(db, "users", user.uid);
-    const snap = await getDoc(ref);
+      if (!regForm || !completeProfile) {
+        return alert("Form elements not found in DOM");
+      }
 
-    if (!snap.exists()) {
-      // New user → hide Register form, show Complete Profile
-      document.getElementById("reg-form").style.display = "none";
-      document.getElementById("complete-profile").style.display = "block";
+      try {
+        const result = await signInWithPopup(auth, googleProvider);
+        const user = result.user;
 
-      // Pre-fill Google data
-      document.getElementById("profile-name").value = user.displayName || "";
-      document.getElementById("profile-school").value = "";
-      document.getElementById("profile-class").value = "";
+        const ref = doc(db, "users", user.uid);
+        const snap = await getDoc(ref);
 
-      // Save Profile function
-      window.saveProfile = async () => {
-        const fullName = document.getElementById("profile-name").value.trim();
-        const school = document.getElementById("profile-school").value.trim();
-        const grade = document.getElementById("profile-class").value.trim();
-        if (!fullName) return alert("Please enter full name");
+        if (!snap.exists()) {
+          regForm.style.display = "none";
+          completeProfile.style.display = "block";
 
-        const [firstName, ...lastArr] = fullName.split(" ");
-        const lastName = lastArr.join(" ");
+          // pre-fill fields
+          document.getElementById("profile-name").value = user.displayName || "";
+          document.getElementById("profile-school").value = "";
+          document.getElementById("profile-class").value = "";
 
-        await setDoc(doc(db, "users", user.uid), {
-          firstName,
-          lastName,
-          school,
-          examYear: grade,
-          email: user.email,
-          createdAt: new Date().toISOString()
-        });
+          window.saveProfile = async () => {
+            // save profile code here...
+          };
 
-        // Redirect to Home
-        renderHome();
-      };
-
-    } else {
-      // Existing user → Home page
-      currentUser = user;
-      renderHome();
-    }
-
-  } catch (err) {
-    alert(err.message);
+        } else {
+          currentUser = user;
+          renderHome();
+        }
+      } catch (err) {
+        alert(err.message);
+      }
+    };
   }
-};
+});
 }
-
 
 // ---------- Login ----------
 function renderLogin(){
@@ -298,41 +287,20 @@ document.getElementById("google-login").onclick = async () => {
     const ref = doc(db, "users", user.uid);
     const snap = await getDoc(ref);
 
-    if (!snap.exists()) {
-      // User first time login with Google → show complete profile form
+    if (snap.exists()) {
+      // User already exists → go to dashboard/home
+      currentUser = user;
+      renderHome();
+    } else {
+      // New user → open complete profile form
       document.getElementById("login-form").style.display = "none";
       document.getElementById("complete-profile").style.display = "block";
 
-      // Pre-fill name from Google
-      document.getElementById("profile-name").value = user.displayName || "";
-      document.getElementById("profile-school").value = "";
-      document.getElementById("profile-class").value = "";
-
-      // Save Profile function
-      window.saveProfile = async () => {
-        const fullName = document.getElementById("profile-name").value.trim();
-        const school = document.getElementById("profile-school").value.trim();
-        const grade = document.getElementById("profile-class").value.trim();
-        if (!fullName) return alert("Please enter full name");
-
-        const [firstName, ...lastArr] = fullName.split(" ");
-        const lastName = lastArr.join(" ");
-
-        await setDoc(doc(db, "users", user.uid), {
-          firstName,
-          lastName,
-          school,
-          examYear: grade,
-          email: user.email,
-          createdAt: new Date().toISOString()
-        });
-
-        renderHome(); // redirect to home after saving
-      };
-
-    } else {
-      // User already exists → redirect to home
-      renderHome();
+      // Prefill name and email from Google
+      const displayName = user.displayName ? user.displayName.split(" ") : ["",""];
+      document.getElementById("profile-firstName").value = displayName[0] || "";
+      document.getElementById("profile-lastName").value = displayName[1] || "";
+      document.getElementById("profile-email").value = user.email || "";
     }
   } catch (err) {
     alert(err.message);
@@ -340,23 +308,30 @@ document.getElementById("google-login").onclick = async () => {
 };
 }
 
-async function saveProfile(){
-  const name = document.getElementById("profile-name").value.trim();
-  const school = document.getElementById("profile-school").value.trim();
+async function saveProfile() {
   const user = auth.currentUser;
-  if(!user) return;
+  if (!user) return;
 
-  await setDoc(doc(db,"users",user.uid), {
-    displayName: name,
-    school,
+  const data = {
+    firstName: document.getElementById("profile-firstName").value.trim(),
+    lastName: document.getElementById("profile-lastName").value.trim(),
+    email: document.getElementById("profile-email").value.trim(),
+    birthday: document.getElementById("profile-birthday").value.trim(),
+    phone: document.getElementById("profile-phone").value.trim(),
+    school: document.getElementById("profile-school").value.trim(),
+    examYear: document.getElementById("profile-examYear").value.trim(),
     createdAt: new Date().toISOString()
-  });
+  };
 
-  await updateProfile(user, { displayName: name });
+  await setDoc(doc(db, "users", user.uid), data);
+  await updateProfile(user, { displayName: `${data.firstName} ${data.lastName}` });
 
   alert("Profile saved!");
   renderHome();
 }
+
+// Button attach කරන්න
+document.getElementById("save-profile-btn").onclick = saveProfile;
 
 
 // ---------- Home ----------
