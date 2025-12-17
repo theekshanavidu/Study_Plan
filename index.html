@@ -185,7 +185,8 @@ function renderRegister(){
       });
     }catch(err){ document.getElementById('reg-error').textContent = err.message; }
   };
-   document.getElementById("google-register").onclick = async () => {
+   // ---------- Google Register ----------
+document.getElementById("google-register").onclick = async () => {
   try {
     const result = await signInWithPopup(auth, googleProvider);
     const user = result.user;
@@ -194,14 +195,44 @@ function renderRegister(){
     const snap = await getDoc(ref);
 
     if (!snap.exists()) {
-      // පරිශීලකයා database එකේ නැතිනම් → Complete Profile form
-      document.getElementById("reg-form").style.display = "none";  // Register form hide කරන්න
+      // New user → hide Register form, show Complete Profile
+      document.getElementById("reg-form").style.display = "none";
       document.getElementById("complete-profile").style.display = "block";
+
+      // Pre-fill Google data
+      document.getElementById("profile-name").value = user.displayName || "";
+      document.getElementById("profile-school").value = "";
+      document.getElementById("profile-class").value = "";
+
+      // Save Profile function
+      window.saveProfile = async () => {
+        const fullName = document.getElementById("profile-name").value.trim();
+        const school = document.getElementById("profile-school").value.trim();
+        const grade = document.getElementById("profile-class").value.trim();
+        if (!fullName) return alert("Please enter full name");
+
+        const [firstName, ...lastArr] = fullName.split(" ");
+        const lastName = lastArr.join(" ");
+
+        await setDoc(doc(db, "users", user.uid), {
+          firstName,
+          lastName,
+          school,
+          examYear: grade,
+          email: user.email,
+          createdAt: new Date().toISOString()
+        });
+
+        // Redirect to Home
+        renderHome();
+      };
+
     } else {
-      // Already registered → Home page එකට යන්න
+      // Existing user → Home page
       currentUser = user;
       renderHome();
     }
+
   } catch (err) {
     alert(err.message);
   }
@@ -268,10 +299,39 @@ document.getElementById("google-login").onclick = async () => {
     const snap = await getDoc(ref);
 
     if (!snap.exists()) {
+      // User first time login with Google → show complete profile form
       document.getElementById("login-form").style.display = "none";
       document.getElementById("complete-profile").style.display = "block";
+
+      // Pre-fill name from Google
+      document.getElementById("profile-name").value = user.displayName || "";
+      document.getElementById("profile-school").value = "";
+      document.getElementById("profile-class").value = "";
+
+      // Save Profile function
+      window.saveProfile = async () => {
+        const fullName = document.getElementById("profile-name").value.trim();
+        const school = document.getElementById("profile-school").value.trim();
+        const grade = document.getElementById("profile-class").value.trim();
+        if (!fullName) return alert("Please enter full name");
+
+        const [firstName, ...lastArr] = fullName.split(" ");
+        const lastName = lastArr.join(" ");
+
+        await setDoc(doc(db, "users", user.uid), {
+          firstName,
+          lastName,
+          school,
+          examYear: grade,
+          email: user.email,
+          createdAt: new Date().toISOString()
+        });
+
+        renderHome(); // redirect to home after saving
+      };
+
     } else {
-      // පරිශීලකයා database එකේ තියෙනවා නම් Home එකට යන්න
+      // User already exists → redirect to home
       renderHome();
     }
   } catch (err) {
