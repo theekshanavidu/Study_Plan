@@ -53,6 +53,8 @@ const appContainer = document.getElementById('app-container');
 const headerGreeting = document.getElementById('header-greeting');
 const headerButtons = document.getElementById('header-buttons');
 
+
+
 // ---------- Greeting ----------
 function getGreeting(name){
   const h = new Date().getHours();
@@ -74,6 +76,7 @@ onAuthStateChanged(auth, u=>{
   if(currentUser) renderHome();
   else renderWelcome();
 });
+
 
 // ---------- Header ----------
 function renderHeader(){
@@ -1183,6 +1186,34 @@ window.deleteRecording = deleteRecording;
 
 </script>
 
+<!-- ❄️ SNOW EFFECT START -->
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+
+  const snowContainer = document.getElementById("snow-container");
+  if (!snowContainer) return; // safety check
+
+  function createSnowflake(){
+    const snowflake = document.createElement("div");
+    snowflake.className = "snowflake";
+    snowflake.textContent = "❄";
+
+    snowflake.style.left = Math.random() * window.innerWidth + "px";
+    snowflake.style.fontSize = Math.random() * 10 + 10 + "px";
+    snowflake.style.animationDuration = Math.random() * 3 + 2 + "s";
+
+    snowContainer.appendChild(snowflake);
+
+    setTimeout(() => snowflake.remove(), 5000);
+  }
+
+  setInterval(createSnowflake, 150);
+
+});
+</script>
+<!-- ❄️ SNOW EFFECT END -->
+
+
 <style>
 body{background:black;color:white;min-height:100vh;}
 .input-field{padding:0.5rem;border-radius:0.5rem;background:#1e293b;border:none;color:white;width:100%;}
@@ -1213,9 +1244,41 @@ body{background:black;color:white;min-height:100vh;}
   height: 20px;
 }
 
+
+/* ❄️ SNOW EFFECT START */
+#snow-container{
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+.snowflake{
+  position: absolute;
+  top: -10px;
+  color: white;
+  user-select: none;
+  animation-name: fall;
+  animation-timing-function: linear;
+}
+
+@keyframes fall{
+  to{
+    transform: translateY(100vh);
+  }
+}
+/* ❄️ SNOW EFFECT END */
+
+
 </style>
 </head>
 <body class="flex flex-col items-center justify-start p-4 min-h-screen">
+<!-- ❄️ SNOW EFFECT START -->
+<div id="snow-container"></div>
+<!-- ❄️ SNOW EFFECT END -->
 
 <header class="w-full p-4 bg-gradient-to-r from-slate-900 via-indigo-900 to-slate-900 shadow-lg flex justify-between items-center flex-wrap">
   <h1 class="text-2xl font-bold">StudyTracker</h1>
