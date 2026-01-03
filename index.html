@@ -988,7 +988,7 @@ async function moveContent(id,dir){
 
 
 // ---------- Admin Panel ----------
-async function renderAdmin(){
+async function renderAdmin() {
   if(!currentUser || currentUser.uid!==ADMIN_UID){ 
     alert("Access Denied"); 
     return; 
@@ -996,42 +996,59 @@ async function renderAdmin(){
 
   appContainer.innerHTML = `
     <h2 class="text-2xl font-bold mb-4">Admin Panel</h2>
+    
+    <!-- Search Input -->
+    <input id="admin-search" placeholder="Search by name, email, school..." class="input-field mb-4 w-full">
+
     <div id="admin-users" class="space-y-2"></div>
     <div id="admin-user-details" class="mt-6"></div>
   `;
 
-  // Fetch users
   const usersSnap = await getDocs(collection(db,'users'));
   let users = usersSnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
-
-  // Sort alphabetically by firstName
   users.sort((a,b) => a.firstName.localeCompare(b.firstName));
 
   const usersContainer = document.getElementById('admin-users');
-  usersContainer.innerHTML = '';
 
-  users.forEach(u => {
-    const div = document.createElement('div');
-    div.className = 'bg-slate-800 p-3 rounded flex justify-between items-center';
+  function displayUsers(list){
+    usersContainer.innerHTML = '';
+    list.forEach(u => {
+      const div = document.createElement('div');
+      div.className = 'bg-slate-800 p-3 rounded flex justify-between items-center';
+      div.innerHTML = `
+        <div>
+          <strong>${u.firstName} ${u.lastName}</strong> (${u.email})<br>
+          School: ${u.school || '-'} • Exam: ${u.examYear || '-'}
+        </div>
+        <div class="flex gap-2">
+          <button class="liquid-btn text-white view-btn">View</button>
+          <button class="liquid-btn text-white delete-btn">Delete</button>
+        </div>
+      `;
+      div.querySelector('.view-btn').addEventListener('click', () => renderAdminUserDetails(u.id));
+      div.querySelector('.delete-btn').addEventListener('click', () => deleteAdminUser(u.id, `${u.firstName} ${u.lastName}`));
+      usersContainer.appendChild(div);
+    });
+  }
 
-    div.innerHTML = `
-      <div>
-        <strong>${u.firstName} ${u.lastName}</strong> (${u.email})<br>
-        School: ${u.school || '-'} • Exam: ${u.examYear || '-'}
-      </div>
-      <div class="flex gap-2">
-        <button class="liquid-btn text-white view-btn">View</button>
-        <button class="liquid-btn text-white delete-btn">Delete</button>
-      </div>
-    `;
+  displayUsers(users); // initial render
 
-    // Fix: add proper event listeners
-    div.querySelector('.view-btn').addEventListener('click', () => renderAdminUserDetails(u.id));
-    div.querySelector('.delete-btn').addEventListener('click', () => deleteAdminUser(u.id, `${u.firstName} ${u.lastName}`));
-
-    usersContainer.appendChild(div);
+  // ---------- Search ----------
+  const searchInput = document.getElementById('admin-search');
+  searchInput.addEventListener('input', e => {
+    const term = e.target.value.toLowerCase().trim();
+    const filtered = users.filter(u => 
+      (u.firstName + ' ' + u.lastName).toLowerCase().includes(term) ||
+      (u.email || '').toLowerCase().includes(term) ||
+      (u.school || '').toLowerCase().includes(term) ||
+      (u.examYear || '').toLowerCase().includes(term)
+    );
+    displayUsers(filtered);
   });
 }
+
+
+  
 
 // ---------- Admin User Details + Charts ----------
 async function renderAdminUserDetails(uid){
@@ -1220,9 +1237,6 @@ body{background:black;color:white;min-height:100vh;}
 </style>
 </head>
 <body class="flex flex-col items-center justify-start p-4 min-h-screen">
-<!-- ❄️ SNOW EFFECT START -->
-<div id="snow-container"></div>
-<!-- ❄️ SNOW EFFECT END -->
 
 <header class="w-full p-4 bg-gradient-to-r from-slate-900 via-indigo-900 to-slate-900 shadow-lg flex justify-between items-center flex-wrap">
   <h1 class="text-2xl font-bold">StudyTracker</h1>
@@ -1238,6 +1252,7 @@ body{background:black;color:white;min-height:100vh;}
 
 </body>
 </html>
+
 
 
 
