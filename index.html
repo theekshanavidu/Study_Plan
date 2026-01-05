@@ -1,5 +1,6 @@
 
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -910,21 +911,40 @@ async function loadLessonContents(lessonId){
     const d = docSnap.data();
     const id = docSnap.id;
 
-    list.innerHTML += `
-      <div class="border p-3 flex justify-between items-center">
-        <a href="${d.link}" target="_blank" class="text-blue-600 underline">
-          ${d.text}
-        </a>
+    const div = document.createElement("div");
+    div.className = "border p-3 flex justify-between items-center";
 
-        ${currentUser?.uid === ADMIN_UID ? `
-          <div class="flex gap-2">
-            <button onclick="moveContent('${id}',-1)">⬆️</button>
-            <button onclick="moveContent('${id}',1)">⬇️</button>
-            <button onclick="deleteContent('${id}')">🗑️</button>
-          </div>
-        ` : ``}
-      </div>
-    `;
+    const a = document.createElement("a");
+    a.href = d.link;
+    a.target = "_blank";
+    a.textContent = d.text;
+    a.className = "text-blue-600 underline";
+    div.appendChild(a);
+
+    if(currentUser?.uid === ADMIN_UID){
+      const btnContainer = document.createElement("div");
+      btnContainer.className = "flex gap-2";
+
+      const upBtn = document.createElement("button");
+      upBtn.textContent = "⬆️";
+      upBtn.onclick = async () => { await moveContent(id, -1); await loadLessonContents(lessonId); };
+
+      const downBtn = document.createElement("button");
+      downBtn.textContent = "⬇️";
+      downBtn.onclick = async () => { await moveContent(id, 1); await loadLessonContents(lessonId); };
+
+      const delBtn = document.createElement("button");
+      delBtn.textContent = "🗑️";
+      delBtn.onclick = async () => { await deleteContent(id); await loadLessonContents(lessonId); };
+
+      btnContainer.appendChild(upBtn);
+      btnContainer.appendChild(downBtn);
+      btnContainer.appendChild(delBtn);
+
+      div.appendChild(btnContainer);
+    }
+
+    list.appendChild(div);
   });
 }
 
@@ -952,17 +972,15 @@ async function addContent(lessonId){
   await loadLessonContents(lessonId); // 🔹 make sure to await
 }
 
-
-
 async function deleteContent(id){
-  if(!confirm("Delete?")) return;
+  if(!confirm("ඔබට මේ content එක delete කරන්න අවශ්‍යද?")) return;
   await deleteDoc(doc(db,"lessonContents",id));
-  location.reload();
+  const lessonId = document.getElementById('content-list').dataset.lessonId;
+  await loadLessonContents(lessonId); // reload list properly
 }
 
 
-
-async function moveContent(id,dir){
+async function moveContent(id, dir){
   const ref = doc(db,"lessonContents",id);
   const snap = await getDoc(ref);
   if(!snap.exists()) return;
@@ -971,19 +989,22 @@ async function moveContent(id,dir){
   const newOrder = d.order + dir;
   if(newOrder < 1) return;
 
+  // swap order with the content which has newOrder
   const q = query(
     collection(db,"lessonContents"),
     where("lessonId","==",d.lessonId),
     where("order","==",newOrder)
   );
-
   const swap = await getDocs(q);
   if(swap.empty) return;
 
+  // update current content
   await updateDoc(ref,{order:newOrder});
+  // update swapped content
   await updateDoc(doc(db,"lessonContents",swap.docs[0].id),{order:d.order});
 
-  loadLessonContents(d.lessonId);
+  // reload list
+  await loadLessonContents(d.lessonId);
 }
 
 
@@ -1268,3 +1289,4 @@ body{background:black;color:white;min-height:100vh;}
 
 
 
+  
