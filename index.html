@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -532,7 +533,7 @@ async function renderProfile(){
   };
 }
 
-
+// ---------- Time Table ----------
 async function renderTimetable() {
   if (!currentUser) { alert("Please login to access Time Table."); return; }
 
@@ -558,23 +559,34 @@ async function renderTimetable() {
         </div>
       </div>
 
-      <div class="overflow-x-auto">
-        <table id="tt-table" class="w-full border border-slate-600 text-sm table-auto">
+<p class="text-sm text-slate-400 md:hidden">
+  👉 Swipe left / right to see full timetable
+</p>
+
+      <div class="overflow-x-auto w-full">
+        <table
+  id="tt-table"
+  class="border border-slate-600 text-sm table-auto min-w-max">
           <thead>
             <tr>
-              <th class="border p-2">Hour</th>
-              ${days.map(d=>`<th class="border p-2">${d}</th>`).join("")}
+              <th class="border p-3 text-center min-w-[110px]">Hour</th>
+              ${days.map(d=>`<th class="border p-3 text-center whitespace-nowrap">${d}</th>`).join("")}
             </tr>
           </thead>
           <tbody>
             ${hours.map((h, hourIndex)=>{
               return `<tr>
-                <td class="border p-2">${h}</td>
+                <td class="border p-3 text-center whitespace-nowrap font-semibold">${h}</td>
                 ${days.map((day, dayIndex)=>{
                   const cellId = `tt_${dayIndex}_${hourIndex}`;
                   const val = (savedData && savedData[cellId]) ? savedData[cellId] : "";
                   return `<td class="border p-1">
-                    <input id="${cellId}" class="bg-slate-900 p-1 rounded w-full" placeholder="Subject / Free" value="${val}">
+                  <input 
+  id="${cellId}" 
+  class="bg-slate-900 p-2 rounded text-center min-w-[130px] placeholder-slate-500 italic"
+  placeholder="${h}"
+  title="Time slot: ${h}"
+  value="${val}">
                   </td>`;
                 }).join("")}
               </tr>`;
@@ -1244,7 +1256,11 @@ body{background:black;color:white;min-height:100vh;}
   <div id="header-buttons" class="flex gap-2 flex-wrap"></div>
 </header>
 
-<main class="flex-1 w-full max-w-xl mt-4" id="app-container"></main>
+<main
+  class="flex-1 w-full max-w-xl sm:max-w-3xl lg:max-w-7xl mt-4 px-2 sm:px-4"
+  id="app-container">
+</main>
+
 
 <footer class="text-sm text-slate-400 mt-4 w-full text-center">
   © Owner 2026
