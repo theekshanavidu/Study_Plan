@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -675,44 +676,36 @@ async function renderTimetable() {
   renderCharts();
 
   // ---------- Export PDF ----------
-  document.getElementById("export-pdf").onclick = () => {
-    const pdf = new jspdf.jsPDF('p', 'pt', 'a4');
+document.getElementById("export-pdf").onclick = () => {
+  const pdf = new jspdf.jsPDF('p', 'pt', 'a4'); // portrait, points
+  const margin = 20;
+  const pageWidth = pdf.internal.pageSize.getWidth();
 
-    // Table Data
-    const tableData = [];
-    hours.forEach((h, hourIndex)=>{
-      const row = [h];
-      days.forEach((_, dayIndex)=>{
-        const val = document.getElementById(`tt_${dayIndex}_${hourIndex}`).value.trim();
-        row.push(val || "");
-      });
-      tableData.push(row);
+  // ====== Table Data ======
+  const tableData = [];
+  hours.forEach((h, hourIndex) => {
+    const row = [h];
+    days.forEach((_, dayIndex) => {
+      const val = document.getElementById(`tt_${dayIndex}_${hourIndex}`).value.trim();
+      row.push(val || "");
     });
+    tableData.push(row);
+  });
 
-    pdf.autoTable({
-      head: [['Hour', ...days]],
-      body: tableData,
-      theme: 'grid',
-      styles: { fontSize: 10, cellPadding: 4 },
-      headStyles: { fillColor: [30,41,59], textColor: 255 },
-      alternateRowStyles: { fillColor: [50,50,50] },
-      margin: { left: 20, right: 20 }
-    });
+  // ====== AutoTable ======
+  pdf.autoTable({
+    head: [['Hour', ...days]],
+    body: tableData,
+    theme: 'grid',
+    styles: { fontSize: 10, cellPadding: 4 },
+    headStyles: { fillColor: [30, 41, 59], textColor: 255 },
+    alternateRowStyles: { fillColor: [240, 240, 240] },
+    margin: { left: margin, right: margin },
+  });
 
-    const weeklyCanvas = document.getElementById('weekly-chart');
-    const monthlyCanvas = document.getElementById('monthly-chart');
-    if(weeklyCanvas){
-      const weeklyImg = weeklyCanvas.toDataURL('image/png');
-      pdf.addImage(weeklyImg, 'PNG', 40, pdf.lastAutoTable.finalY + 20, 520, 200);
-    }
-    if(monthlyCanvas){
-      const monthlyImg = monthlyCanvas.toDataURL('image/png');
-      pdf.addPage();
-      pdf.addImage(monthlyImg, 'PNG', 40, 40, 520, 200);
-    }
-
-    pdf.save(`timetable_${currentUser.uid}.pdf`);
-  };
+  // ====== Save PDF ======
+  pdf.save(`timetable_${currentUser.uid}.pdf`);
+};
 }
 
 function renderSubjects(){
@@ -1268,6 +1261,7 @@ body{background:black;color:white;min-height:100vh;}
 
 </body>
 </html>
+
 
 
 
