@@ -469,7 +469,7 @@ async function renderCharts(userId = currentUser.uid){
       type:'line',
       data:{
         labels:Array.from({length:7},(_,i)=>{const d=new Date(); d.setDate(today.getDate()-6+i); return d.toISOString().slice(5,10);}),
-        datasets:[{label:'Hours', data:weekly, borderColor:'#8b5cf6', backgroundColor:'rgba(139,92,246,0.3)', fill:true , tension: 0.1}]
+        datasets:[{label:'Hours', data:weekly, borderColor:'#8b5cf6', backgroundColor:'rgba(139,92,246,0.3)', fill:true}]
       },
       options: {
   responsive: true,
@@ -517,7 +517,7 @@ async function renderCharts(userId = currentUser.uid){
       type:'line',
       data:{
         labels:monthLabels,
-        datasets:[{label:'Hours', data:values, borderColor:'#22d3ee', backgroundColor:'rgba(34,211,238,0.3)', fill:true ,  tension: 0.1}]
+        datasets:[{label:'Hours', data:values, borderColor:'#22d3ee', backgroundColor:'rgba(34,211,238,0.3)', fill:true}]
       },
       options: {
   responsive: true,
@@ -1197,7 +1197,6 @@ async function renderAdminUserDetails(uid){
         borderColor: '#8b5cf6',
         backgroundColor: 'rgba(139,92,246,0.3)',
         fill: true,
-        tension: 0.1
       }]
     },
   options: {
@@ -1247,7 +1246,6 @@ window.adminMonthlyChart = new Chart(ctxM, {
       borderColor: '#22d3ee',
       backgroundColor: 'rgba(34,211,238,0.3)',
       fill: true,
-      tension: 0.1
     }]
   },
     options: {
@@ -1382,6 +1380,7 @@ body{background:black;color:white;min-height:100vh;}
 
 </body>
 </html>
+
 
 
 
