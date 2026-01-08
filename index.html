@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -16,7 +14,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
 
 
-<!-- Firebase -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
@@ -55,7 +52,53 @@ const appContainer = document.getElementById('app-container');
 const headerGreeting = document.getElementById('header-greeting');
 const headerButtons = document.getElementById('header-buttons');
 
+// ---------- ROUTER SYSTEM ----------
+function navigateTo(path) {
+  window.location.hash = path;
+}
 
+window.addEventListener('hashchange', router);
+
+async function router() {
+  const path = window.location.hash.slice(1) || '/';
+  renderHeader();
+
+  // Public routes
+  if (path === '/' || path === '/welcome') { renderWelcome(); return; }
+  if (path === '/login') { renderLogin(); return; }
+  if (path === '/register') { renderRegister(); return; }
+
+  // Protected routes check
+  if (!currentUser) {
+    // If not logged in and trying to access protected, go to welcome
+    renderWelcome();
+    return;
+  }
+
+  // Route logic
+  if (path === '/home') { renderHome(); }
+  else if (path === '/profile') { renderProfile(); }
+  else if (path === '/timetable') { renderTimetable(); }
+  else if (path === '/adminpanel') { renderAdmin(); }
+  else if (path === '/recording') { renderSubjects(); }
+  
+  // Dynamic Recording Routes: /recording/subject/type/lesson
+  else if (path.startsWith('/recording/')) {
+    const parts = path.split('/'); 
+    const subject = parts[2]; // chemistry, physics, etc
+    const type = parts[3];    // theory, revision
+    const lesson = parts[4];  // lesson01, 02...
+
+    if (subject && type && lesson) {
+      const day = lesson.replace('lesson', '');
+      openLessonPage(subject, type, day);
+    } else if (subject && type) {
+      renderLessons(subject, type);
+    } else if (subject) {
+      renderType(subject);
+    }
+  }
+}
 
 // ---------- Greeting ----------
 function getGreeting(name){
@@ -74,9 +117,13 @@ setInterval(updateGreeting, 1000);
 onAuthStateChanged(auth, u=>{
   currentUser = u;
   if(currentUser && currentUser.uid===ADMIN_UID) currentUser.displayName="Admin";
-  renderHeader();
-  if(currentUser) renderHome();
-  else renderWelcome();
+  
+  // Initial Route Load
+  if(!window.location.hash || window.location.hash === '#/') {
+    navigateTo(currentUser ? '/home' : '/welcome');
+  } else {
+    router();
+  }
 });
 
 
@@ -84,24 +131,27 @@ onAuthStateChanged(auth, u=>{
 function renderHeader(){
   headerButtons.innerHTML='';
   if(currentUser){
-    const homeBtn = createLiquidButton("Home",()=>renderHome());
-    const profileBtn = createLiquidButton("Profile",()=>renderProfile());
-    const timetableBtn = createLiquidButton("Time Table", ()=>renderTimetable());
+    const homeBtn = createLiquidButton("Home",()=>navigateTo('/home'));
+    const profileBtn = createLiquidButton("Profile",()=>navigateTo('/profile'));
+    const timetableBtn = createLiquidButton("Time Table", ()=>navigateTo('/timetable'));
     headerButtons.appendChild(timetableBtn);
     headerButtons.appendChild(homeBtn);
     headerButtons.appendChild(profileBtn);
 
     if(currentUser.uid===ADMIN_UID){
-      const adminBtn = createLiquidButton("Admin Panel",()=>renderAdmin());
+      const adminBtn = createLiquidButton("Admin Panel",()=>navigateTo('/adminpanel'));
       headerButtons.appendChild(adminBtn);
     }
 
-    const logoutBtn = createLiquidButton("Logout", async ()=>await signOut(auth));
+    const logoutBtn = createLiquidButton("Logout", async ()=>{
+        await signOut(auth);
+        navigateTo('/welcome');
+    });
     headerButtons.appendChild(logoutBtn);
 
   }else{
-    const loginBtn = createLiquidButton("Login",()=>renderLogin());
-    const regBtn = createLiquidButton("Register",()=>renderRegister());
+    const loginBtn = createLiquidButton("Login",()=>navigateTo('/login'));
+    const regBtn = createLiquidButton("Register",()=>navigateTo('/register'));
     headerButtons.appendChild(loginBtn);
     headerButtons.appendChild(regBtn);
   }
@@ -127,8 +177,8 @@ function renderWelcome(){
     </div>
   </div>`;
 
-  document.getElementById('welcome-login-btn').onclick = () => renderLogin();
-  document.getElementById('welcome-register-btn').onclick = () => renderRegister();
+  document.getElementById('welcome-login-btn').onclick = () => navigateTo('/login');
+  document.getElementById('welcome-register-btn').onclick = () => navigateTo('/register');
 }
 
 // ---------- Register ----------
@@ -191,6 +241,7 @@ function renderRegister(){
         email:f.email.value,
         createdAt:new Date().toISOString()
       });
+      navigateTo('/home');
     }catch(err){ document.getElementById('reg-error').textContent = err.message; }
   };
  }
@@ -208,7 +259,7 @@ function renderLogin(){
 
     <div class="flex justify-between items-center mt-2">
       <button type="submit" class="liquid-btn">Login</button>
-      <button type="button" id="forgot-pass" class="text-sm text-slate-300">Forgot?</button>
+      <button type="button" onclick="handleForgotPassword()" class="text-sm text-slate-300 hover:text-white underline">Forgot?</button>
     </div>
 
     <div id="login-error" class="text-red-400"></div>
@@ -220,7 +271,6 @@ function renderLogin(){
 
 
 
-  <!-- 👇 COMPLETE PROFILE INSIDE -->
   <div id="complete-profile" style="display:none" class="mt-4 space-y-2">
     <h2 class="text-xl font-bold">Complete Your Profile</h2>
     <input id="profile-name" placeholder="Full Name" class="input-field">
@@ -235,9 +285,8 @@ document.getElementById('login-form').onsubmit = async e=>{
   const f = e.target;
   try{
     const cred = await signInWithEmailAndPassword(auth,f.email.value,f.password.value);
-    currentUser = cred.user;       // ✅ update currentUser
-    renderHeader();                // ✅ update header buttons
-    renderHome();                  // ✅ redirect to Home
+    currentUser = cred.user;       
+    navigateTo('/home');
   }catch(err){ 
     document.getElementById('login-error').textContent = err.message; 
   }
@@ -249,17 +298,14 @@ document.getElementById('login-form').onsubmit = async e=>{
     const result = await signInWithPopup(auth, googleProvider);
     const user = result.user;
 
-    // check if user profile exists in Firestore
     const ref = doc(db, "users", user.uid);
     const snap = await getDoc(ref);
 
     if (snap.exists()) {
-      // User already exists → go to dashboard/home
       currentUser = user;
-      renderHome();
+      navigateTo('/home');
     } else {
-      // New user → open complete profile form
-      renderLogin(); // ensure login page is rendered with complete-profile div
+      renderLogin(); 
       const completeProfile = document.getElementById("complete-profile");
       const loginForm = document.getElementById("login-form");
 
@@ -268,7 +314,6 @@ document.getElementById('login-form').onsubmit = async e=>{
       loginForm.style.display = "none";
       completeProfile.style.display = "block";
 
-      // prefill name and email from Google
       const displayName = user.displayName ? user.displayName.split(" ") : ["",""];
       completeProfile.innerHTML = `
         <h2 class="text-xl font-bold">Complete Your Profile</h2>
@@ -298,7 +343,6 @@ document.getElementById('login-form').onsubmit = async e=>{
         <button id="save-profile-btn" class="liquid-btn w-full">Save</button>
       `;
 
-      // attach saveProfile
       document.getElementById("save-profile-btn").onclick = async () => {
         const data = {
           firstName: document.getElementById("profile-firstName").value.trim(),
@@ -316,7 +360,7 @@ document.getElementById('login-form').onsubmit = async e=>{
 
         alert("Profile saved!");
         currentUser = user;
-        renderHome();
+        navigateTo('/home');
       };
     }
   } catch (err) {
@@ -344,12 +388,32 @@ async function saveProfile() {
   await updateProfile(user, { displayName: `${data.firstName} ${data.lastName}` });
 
   alert("Profile saved!");
-  renderHome();
+  navigateTo('/home');
 }
 
-// Button attach කරන්න
-document.getElementById("save-profile-btn").onclick = saveProfile;
+// ---------- Forget ----------
+async function handleForgotPassword() {
+  const email = prompt("කරුණාකර ඔබගේ Email ලිපිනය ඇතුළත් කරන්න:");
+  if (!email) return;
 
+  try {
+    await sendPasswordResetEmail(auth, email);
+    alert("Password reset කිරීමට අවශ්‍ය ලින්ක් එක ඔබගේ Email ලිපිනයට එවනු ලැබුවා. කරුණාකර ඔබගේ Inbox/Spam පරීක්ෂා කරන්න.");
+  } catch (err) {
+    let errorMsg = "දෝෂයක් සිදු විය: ";
+    if (err.code === 'auth/user-not-found') {
+      errorMsg += "මෙම Email ලිපිනයෙන් ගිණුමක් සොයාගත නොහැක.";
+    } else if (err.code === 'auth/invalid-email') {
+      errorMsg += "Email ලිපිනය නිවැරදි නැත.";
+    } else {
+      errorMsg += err.message;
+    }
+    alert(errorMsg);
+  }
+}
+
+// මෙය window object එකට සම්බන්ධ කරමු එවිට HTML එකෙන් access කළ හැක
+window.handleForgotPassword = handleForgotPassword;
 
 // ---------- Home ----------
 async function renderHome(){
@@ -360,7 +424,6 @@ async function renderHome(){
 </button>
     <h2 class="text-2xl font-bold">Daily Entry</h2>
 
-    <!-- Save Today's Entry -->
     <form id="daily-form" class="space-y-2 flex flex-col gap-2">
       <input type="date" name="date" value="${new Date().toISOString().slice(0,10)}" class="input-field" required>
       <input type="number" name="hours" placeholder="Hours studied" min="0" max="24" class="input-field" required>
@@ -368,7 +431,6 @@ async function renderHome(){
       <div id="daily-msg" class="text-green-400"></div>
     </form>
 
-    <!-- Update Today's Entry -->
     <h3 class="text-xl font-bold mt-4">Update Entry</h3>
     <form id="update-today-form" class="flex flex-col gap-2">
       <input type="date" name="updateDate" class="input-field" value="${new Date().toISOString().slice(0,10)}" required>
@@ -382,8 +444,6 @@ async function renderHome(){
     <h2 class="text-2xl font-bold mt-4">Monthly Chart</h2>
     <canvas id="monthly-chart" class="bg-slate-800 rounded p-2"></canvas>
   </div>`;
-
-  // ---------- Add / Save Entry ----------
     
   document.getElementById('daily-form').onsubmit = async e=>{
     e.preventDefault();
@@ -402,16 +462,14 @@ async function renderHome(){
     }
     renderCharts();
   };
-document.getElementById("recording-btn").onclick = () => {
-  renderSubjects();
-};
+document.getElementById("recording-btn").onclick = () => navigateTo('/recording');
 
 
   // ---------- Update Entry ----------
   document.getElementById('update-today-form').onsubmit = async e=>{
     e.preventDefault();
     const f = e.target;
-    const today = f.updateDate.value; // <-- user-selected date
+    const today = f.updateDate.value; 
     const newHours = Number(f.updateHours.value);
     if(newHours > 24){ alert("Maximum hours per day is 24"); return; }
 
@@ -427,7 +485,6 @@ document.getElementById("recording-btn").onclick = () => {
     renderCharts();
   };
 
-  // ---------- Render Charts ----------
   renderCharts();
 }
 
@@ -438,7 +495,6 @@ async function renderCharts(userId = currentUser.uid){
   const weekly=[], monthly={};
   const today = new Date();
 
-  // Weekly aggregation (last 7 days)
   for(let i=6;i>=0;i--){
     const d = new Date();
     d.setDate(today.getDate()-i);
@@ -446,13 +502,11 @@ async function renderCharts(userId = currentUser.uid){
     weekly.push(data.filter(x=>x.date===ds).reduce((a,b)=>a+b.hours,0));
   }
 
-  // Monthly aggregation
   data.forEach(x=>{
-    const month = x.date.slice(0,7); // e.g. "2025-12"
+    const month = x.date.slice(0,7); 
     monthly[month] = (monthly[month] || 0) + x.hours;
   });
 
-  // Sort months chronologically
   const months = Object.keys(monthly).sort((a,b)=>{
     const [yearA, monthA] = a.split('-').map(Number);
     const [yearB, monthB] = b.split('-').map(Number);
@@ -460,7 +514,6 @@ async function renderCharts(userId = currentUser.uid){
   });
   const values = months.map(m => monthly[m]);
 
-  // ---------- Weekly chart ----------
   const ctxW = document.getElementById('weekly-chart');
   if(ctxW){
     const ctx = ctxW.getContext('2d');
@@ -473,45 +526,21 @@ async function renderCharts(userId = currentUser.uid){
       },
       options: {
   responsive: true,
-  plugins: {
-    legend: { labels: { color: '#fff' } }
-  },
-  scales: {
-    x: {
-      ticks: { color: '#fff' }
-    },
-    y: {
-      ticks: { color: '#fff' },
-      beginAtZero: true   // ✅ THIS LINE
-    }
-  }
+  plugins: { legend: { labels: { color: '#fff' } } },
+  scales: { x: { ticks: { color: '#fff' } }, y: { ticks: { color: '#fff' }, beginAtZero: true } }
 }
     });
   }
 
 
-  // ---------- Monthly chart ----------
   const ctxM = document.getElementById('monthly-chart');
   if(ctxM){
     const ctx = ctxM.getContext('2d');
     window.monthlyChart?.destroy();
-
-// Sort months
-  const months = Object.keys(monthly).sort((a, b) => {
-    const [yA, mA] = a.split("-").map(Number);
-    const [yB, mB] = b.split("-").map(Number);
-    return yA === yB ? mA - mB : yA - yB;
-  });
-
-  // Get values
-  const values = months.map(m => monthly[m]);
-
-  // Format labels: Jan 2026, Feb 2026 ...
-  const monthLabels = months.map(m => {
-    const [year, month] = m.split("-");
-    return new Date(year, month - 1)
-      .toLocaleString("en", { month: "short", year: "numeric" });
-  });
+    const monthLabels = months.map(m => {
+        const [year, month] = m.split("-");
+        return new Date(year, month - 1).toLocaleString("en", { month: "short", year: "numeric" });
+    });
 
     window.monthlyChart = new Chart(ctx,{
       type:'line',
@@ -521,18 +550,8 @@ async function renderCharts(userId = currentUser.uid){
       },
       options: {
   responsive: true,
-  plugins: {
-    legend: { labels: { color: '#fff' } }
-  },
-  scales: {
-    x: {
-      ticks: { color: '#fff' }
-    },
-    y: {
-      ticks: { color: '#fff' },
-      beginAtZero: true   // ✅ THIS LINE
-    }
-  }
+  plugins: { legend: { labels: { color: '#fff' } } },
+  scales: { x: { ticks: { color: '#fff' } }, y: { ticks: { color: '#fff' }, beginAtZero: true } }
 }
     });
   }
@@ -619,15 +638,9 @@ async function renderTimetable() {
           <button id="export-pdf" class="liquid-btn">Export PDF</button>
         </div>
       </div>
-
-<p class="text-sm text-slate-400 md:hidden">
-  👉 Swipe left / right to see full timetable
-</p>
-
+      <p class="text-sm text-slate-400 md:hidden">👉 Swipe left / right to see full timetable</p>
       <div class="overflow-x-auto w-full">
-        <table
-  id="tt-table"
-  class="border border-slate-600 text-sm table-auto min-w-max">
+        <table id="tt-table" class="border border-slate-600 text-sm table-auto min-w-max">
           <thead>
             <tr>
               <th class="border p-3 text-center min-w-[110px]">Hour</th>
@@ -642,12 +655,7 @@ async function renderTimetable() {
                   const cellId = `tt_${dayIndex}_${hourIndex}`;
                   const val = (savedData && savedData[cellId]) ? savedData[cellId] : "";
                   return `<td class="border p-1">
-                  <input 
-  id="${cellId}" 
-  class="bg-slate-900 p-2 rounded text-center min-w-[130px] placeholder-slate-500 italic"
-  placeholder="${h}"
-  title="Time slot: ${h}"
-  value="${val}">
+                  <input id="${cellId}" class="bg-slate-900 p-2 rounded text-center min-w-[130px] placeholder-slate-500 italic" placeholder="${h}" value="${val}">
                   </td>`;
                 }).join("")}
               </tr>`;
@@ -655,20 +663,16 @@ async function renderTimetable() {
           </tbody>
         </table>
       </div>
-
       <div id="tt-msg" class="text-green-400 mt-2"></div>
     </div>
-
     <div class="hidden md:block mt-6">
       <h2 class="text-2xl font-bold">Weekly Chart</h2>
       <canvas id="weekly-chart" class="bg-slate-800 rounded p-2 w-full" height="200"></canvas>
-
       <h2 class="text-2xl font-bold mt-6">Monthly Chart</h2>
       <canvas id="monthly-chart" class="bg-slate-800 rounded p-2 w-full" height="200"></canvas>
     </div>
   `;
 
-  // ---------- Fill Free ----------
   document.getElementById("tt-fill-free").onclick = ()=> {
     days.forEach((_,d)=> hours.forEach((_,h)=>{
       const el = document.getElementById(`tt_${d}_${h}`);
@@ -676,17 +680,14 @@ async function renderTimetable() {
     }));
   };
 
-  // ---------- Clear All ----------
   document.getElementById("tt-clear").onclick = ()=> {
     if(!confirm("Clear all timetable entries?")) return;
     days.forEach((_,d)=> hours.forEach((_,h)=>{
       const el = document.getElementById(`tt_${d}_${h}`);
       if(el) el.value="";
     }));
-    document.getElementById("tt-msg").textContent = "Cleared (not saved). Press Save to persist.";
   };
 
-  // ---------- Save ----------
   document.getElementById("save-timetable").onclick = async ()=>{
     const saveObj = {};
     days.forEach((_,d)=> hours.forEach((_,h)=>{
@@ -696,192 +697,92 @@ async function renderTimetable() {
     try{
       await setDoc(ttRef, saveObj);
       document.getElementById("tt-msg").textContent = "Time Table saved successfully!";
-    }catch(err){
-      document.getElementById("tt-msg").textContent = "Save failed: " + err.message;
-    }
+    }catch(err){ document.getElementById("tt-msg").textContent = "Save failed: " + err.message; }
     renderCharts();
   };
 
-  // ---------- Render Charts ----------
-  async function renderCharts(){
-    const snap = await getDocs(query(collection(db,'studyLogs'), where('userId','==',currentUser.uid)));
-    const data = snap.docs.map(d=>d.data());
-    const weekly=[], monthly={};
-    const today=new Date();
-    for(let i=6;i>=0;i--){
-      const d=new Date(); d.setDate(today.getDate()-i);
-      const ds=d.toISOString().slice(0,10);
-      weekly.push(data.filter(x=>x.date===ds).reduce((a,b)=>a+b.hours,0));
-    }
-    data.forEach(x=>{
-      const month=x.date.slice(0,7);
-      monthly[month]=(monthly[month]||0)+x.hours;
-    });
-
-    const weeklyCanvas = document.getElementById('weekly-chart');
-    if(weeklyCanvas){
-      const ctxW = weeklyCanvas.getContext('2d');
-      window.weeklyChart?.destroy();
-      window.weeklyChart = new Chart(ctxW,{type:'line',data:{labels:Array.from({length:7},(_,i)=>{const d=new Date(); d.setDate(today.getDate()-6+i); return d.toISOString().slice(5,10);}), datasets:[{label:'Hours',data:weekly,borderColor:'#8b5cf6', backgroundColor:'rgba(139,92,246,0.3)',fill:true}]} , options:{responsive:true, plugins:{legend:{labels:{color:'#fff'}}}, scales:{x:{ticks:{color:'#fff'}}, y:{ticks:{color:'#fff'}}}}});
-    }
-
-    const monthlyCanvas = document.getElementById('monthly-chart');
-    if(monthlyCanvas){
-      const ctxM = monthlyCanvas.getContext('2d');
-      window.monthlyChart?.destroy();
-      window.monthlyChart = new Chart(ctxM,{type:'line', data:{labels:Object.keys(monthly), datasets:[{label:'Hours',data:Object.values(monthly),borderColor:'#22d3ee',backgroundColor:'rgba(34,211,238,0.3)',fill:true}]} , options:{responsive:true,plugins:{legend:{labels:{color:'#fff'}}}, scales:{x:{ticks:{color:'#fff'}}, y:{ticks:{color:'#fff'}}}}});
-    }
-  }
-
   renderCharts();
 
-  // ---------- Export PDF ----------
-document.getElementById("export-pdf").onclick = () => {
-  const pdf = new jspdf.jsPDF('p', 'pt', 'a4'); // portrait, points
-  const margin = 20;
-  const pageWidth = pdf.internal.pageSize.getWidth();
-
-  // ====== Table Data ======
-  const tableData = [];
-  hours.forEach((h, hourIndex) => {
-    const row = [h];
-    days.forEach((_, dayIndex) => {
-      const val = document.getElementById(`tt_${dayIndex}_${hourIndex}`).value.trim();
-      row.push(val || "");
+  document.getElementById("export-pdf").onclick = () => {
+    const pdf = new jspdf.jsPDF('p', 'pt', 'a4');
+    const tableData = [];
+    hours.forEach((h, hourIndex) => {
+        const row = [h];
+        days.forEach((_, dayIndex) => {
+            const val = document.getElementById(`tt_${dayIndex}_${hourIndex}`).value.trim();
+            row.push(val || "");
+        });
+        tableData.push(row);
     });
-    tableData.push(row);
-  });
-
-  // ====== AutoTable ======
-  pdf.autoTable({
-    head: [['Hour', ...days]],
-    body: tableData,
-    theme: 'grid',
-    styles: { fontSize: 10, cellPadding: 4 },
-    headStyles: { fillColor: [30, 41, 59], textColor: 255 },
-    alternateRowStyles: { fillColor: [240, 240, 240] },
-    margin: { left: margin, right: margin },
-  });
-
-  // ====== Save PDF ======
-  pdf.save(`timetable_${currentUser.uid}.pdf`);
-};
+    pdf.autoTable({
+        head: [['Hour', ...days]],
+        body: tableData,
+        theme: 'grid',
+        styles: { fontSize: 10, cellPadding: 4 },
+        headStyles: { fillColor: [30, 41, 59], textColor: 255 },
+    });
+    pdf.save(`timetable_${currentUser.uid}.pdf`);
+  };
 }
 
 function renderSubjects(){
   appContainer.innerHTML = `
     <h2 class="text-2xl font-bold mb-6">Select Subject</h2>
-
     <div class="flex flex-col gap-4">
       <button id="btn-maths" class="flex items-center gap-4 bg-slate-800 p-4 rounded-xl hover:bg-slate-700">
         <img src="https://api.combinedmaths.lk/files-public/profiles/281124/1862199793225306112.jpg" class="w-24 h-24 rounded-xl object-cover">
         <span class="text-xl font-bold">Combine Maths - Ruwan Darshana</span>
       </button>
-
       <button id="btn-physics" class="flex items-center gap-4 bg-slate-800 p-4 rounded-xl hover:bg-slate-700">
         <img src="https://static.indeepa.lk/lecturer/7/en/652248466c448.jpg" class="w-24 h-24 rounded-xl object-cover">
         <span class="text-xl font-bold">Physics - Anuradha Perera</span>
       </button>
-
       <button id="btn-chemistry" class="flex items-center gap-4 bg-slate-800 p-4 rounded-xl hover:bg-slate-700">
         <img src="https://static.indeepa.lk/lecturer/6/en/6522475ddf2bf.jpg" class="w-24 h-24 rounded-xl object-cover">
         <span class="text-xl font-bold">Chemistry - Amila Dasanayake</span>
       </button>
     </div>
   `;
-
-  // 🔹 Attach click events
-  document.getElementById("btn-maths").onclick = () => renderType("maths");
-  document.getElementById("btn-physics").onclick = () => renderType("physics");
-  document.getElementById("btn-chemistry").onclick = () => renderType("chemistry");
-}
-
-
-function subjectBtn(title,img,subject){
-  return `
-    <button onclick="renderType('${subject}')"
-      class="flex items-center gap-4 bg-slate-800 p-4 rounded-xl hover:bg-slate-700">
-      <img src="${img}" class="w-24 h-24 rounded-xl object-cover">
-      <span class="text-xl font-bold">${title}</span>
-    </button>
-  `;
+  document.getElementById("btn-maths").onclick = () => navigateTo('/recording/maths');
+  document.getElementById("btn-physics").onclick = () => navigateTo('/recording/physics');
+  document.getElementById("btn-chemistry").onclick = () => navigateTo('/recording/chemistry');
 }
 
 function renderType(subject){
   appContainer.innerHTML = `
     <h2 class="text-2xl font-bold mb-6">${subject.toUpperCase()}</h2>
-
     <div class="flex gap-6">
-      <button class="liquid-btn text-xl px-8 py-4" id="btn-theory">
-        Theory
-      </button>
-
-      <button class="liquid-btn text-xl px-8 py-4" id="btn-revision">
-        Revision
-      </button>
+      <button class="liquid-btn text-xl px-8 py-4" id="btn-theory">Theory</button>
+      <button class="liquid-btn text-xl px-8 py-4" id="btn-revision">Revision</button>
     </div>
   `;
-
-  document.getElementById("btn-theory")
-    .addEventListener("click", ()=> renderLessons(subject,"theory"));
-
-  document.getElementById("btn-revision")
-    .addEventListener("click", ()=> renderLessons(subject,"revision"));
+  document.getElementById("btn-theory").onclick = ()=> navigateTo(`/recording/${subject}/theory`);
+  document.getElementById("btn-revision").onclick = ()=> navigateTo(`/recording/${subject}/revision`);
 }
 
 
 async function renderLessons(subject, type){
-
   appContainer.innerHTML = `
-    <h2 class="text-2xl font-bold mb-4">
-      ${subject.toUpperCase()} - ${type.toUpperCase()}
-    </h2>
-
+    <h2 class="text-2xl font-bold mb-4">${subject.toUpperCase()} - ${type.toUpperCase()}</h2>
     <div id="lessons-list" class="flex flex-col gap-3"></div>
   `;
-
   const list = document.getElementById("lessons-list");
-
-  // 1️⃣ Load Firestore data (optional)
   let lessonsData = {};
   try{
-    const snap = await getDocs(
-      query(
-        collection(db,"lessons"),
-        where("subject","==",subject),
-        where("type","==",type)
-      )
-    );
+    const snap = await getDocs(query(collection(db,"lessons"),where("subject","==",subject),where("type","==",type)));
+    snap.forEach(doc=>{ lessonsData[doc.data().day] = doc.data().title; });
+  }catch(err){ console.warn(err); }
 
-    snap.forEach(doc=>{
-      const d = doc.data();
-      lessonsData[d.day] = d.title;
-    });
-  }catch(err){
-    console.warn("No lessons yet, using defaults");
-  }
-
-  // 2️⃣ ALWAYS render 20 buttons
   for(let i=1;i<=20;i++){
     const day = String(i).padStart(2,"0");
     const title = lessonsData[day] || `Day ${day} - Lesson Title`;
-
     const row = document.createElement("div");
     row.className = "flex gap-2 items-center";
-
     const lessonBtn = document.createElement("button");
     lessonBtn.className = "liquid-btn flex-1";
-    lessonBtn.id = `lesson-btn-${i}`;
     lessonBtn.textContent = title;
-
+    lessonBtn.onclick = ()=> navigateTo(`/recording/${subject}/${type}/lesson${day}`);
     row.appendChild(lessonBtn);
-    lessonBtn.onclick = ()=>{
-  openLessonPage(subject, type, day);
-};
-
-
-
-    // ✏️ Admin only
     if(currentUser && currentUser.uid === ADMIN_UID){
       const editBtn = document.createElement("button");
       editBtn.className = "liquid-btn bg-yellow-500";
@@ -889,51 +790,23 @@ async function renderLessons(subject, type){
       editBtn.onclick = ()=> renameLesson(i, subject, type);
       row.appendChild(editBtn);
     }
-
     list.appendChild(row);
   }
 }
 
-
-
 async function renameLesson(i, subject, type){
-  if(currentUser.uid !== ADMIN_UID){
-    alert("Only admin can rename lessons.");
-    return;
-  }
-
   const day = String(i).padStart(2, "0");
-  const docId = `${subject}_${type}_${day}`;
-  const btn = document.getElementById(`lesson-btn-${i}`);
-  const current = btn.textContent;
-
-  const newName = prompt("New lesson name:", current);
+  const newName = prompt("New lesson name:");
   if(!newName) return;
-
-  // Update button immediately
-  btn.textContent = newName;
-
-  // Save to Firestore
-  await setDoc(doc(db, "lessons", docId), {
-    title: newName,
-    subject,
-    type,
-    day
-  });
+  await setDoc(doc(db, "lessons", `${subject}_${type}_${day}`), { title: newName, subject, type, day });
+  renderLessons(subject, type);
 }
-
-// attach to window for inline calls (if needed)
-window.renameLesson = renameLesson;
-
-
 
 async function openLessonPage(subject, type, day){
   const lessonId = `${subject}_${type}_${day}`;
-
   appContainer.innerHTML = `
     <h2 class="text-2xl font-bold mb-4">Lesson ${day}</h2>
     <div id="content-list" class="flex flex-col gap-3 mb-6"></div>
-
     ${currentUser?.uid === ADMIN_UID ? `
       <div class="flex gap-2">
         <input id="content-text" placeholder="Text" class="border p-2 flex-1 text-black">
@@ -942,388 +815,171 @@ async function openLessonPage(subject, type, day){
       </div>
     ` : ``}
   `;
-
-  // Load existing contents
   loadLessonContents(lessonId);
-
-  // Event listener attach කරන්න – DOM render වුනාම
   if(currentUser?.uid === ADMIN_UID){
-    document.getElementById("add-content-btn")
-      .addEventListener("click", () => addContent(lessonId));
+    document.getElementById("add-content-btn").onclick = () => addContent(lessonId);
   }
 }
 
 async function loadLessonContents(lessonId){
   const list = document.getElementById("content-list");
   list.innerHTML = "";
-
-  const q = query(
-    collection(db,"lessonContents"),
-    where("lessonId","==",lessonId),
-    orderBy("order","asc")
-  );
-
-  const snap = await getDocs(q);
-
+  const snap = await getDocs(query(collection(db,"lessonContents"),where("lessonId","==",lessonId),orderBy("order","asc")));
   snap.forEach(docSnap=>{
     const d = docSnap.data();
     const id = docSnap.id;
-
     const div = document.createElement("div");
     div.className = "border p-3 flex justify-between items-center";
-
-    const a = document.createElement("a");
-    a.href = d.link;
-    a.target = "_blank";
-    a.textContent = d.text;
-    a.className = "text-blue-600 underline";
-    div.appendChild(a);
-
+    div.innerHTML = `<a href="${d.link}" target="_blank" class="text-blue-600 underline">${d.text}</a>`;
     if(currentUser?.uid === ADMIN_UID){
-      const btnContainer = document.createElement("div");
-      btnContainer.className = "flex gap-2";
-
-      const upBtn = document.createElement("button");
-      upBtn.textContent = "⬆️";
-      upBtn.onclick = async () => { await moveContent(id, -1); await loadLessonContents(lessonId); };
-
-      const downBtn = document.createElement("button");
-      downBtn.textContent = "⬇️";
-      downBtn.onclick = async () => { await moveContent(id, 1); await loadLessonContents(lessonId); };
-
-      const delBtn = document.createElement("button");
-      delBtn.textContent = "🗑️";
-      delBtn.onclick = async () => { await deleteContent(id); await loadLessonContents(lessonId); };
-
-      btnContainer.appendChild(upBtn);
-      btnContainer.appendChild(downBtn);
-      btnContainer.appendChild(delBtn);
-
-      div.appendChild(btnContainer);
+      const bc = document.createElement("div"); bc.className = "flex gap-2";
+      bc.innerHTML = `<button onclick="moveContent('${id}',-1)">⬆️</button><button onclick="moveContent('${id}',1)">⬇️</button><button onclick="deleteContent('${id}')">🗑️</button>`;
+      div.appendChild(bc);
     }
-
     list.appendChild(div);
   });
 }
 
-
-	
-
-
 async function addContent(lessonId){
   const text = document.getElementById("content-text").value.trim();
   const link = document.getElementById("content-link").value.trim();
-  if(!text || !link) return alert("Fill all fields");
-
-  const snap = await getDocs(
-    query(collection(db,"lessonContents"), where("lessonId","==",lessonId))
-  );
-
-  await addDoc(collection(db,"lessonContents"),{
-    lessonId,
-    text,
-    link,
-    order: snap.size + 1,
-    createdAt: Date.now()
-  });
-
-  document.getElementById("content-text").value = "";
-  document.getElementById("content-link").value = "";
-
-  await loadLessonContents(lessonId); // 🔹 make sure to await
+  if(!text || !link) return;
+  const snap = await getDocs(query(collection(db,"lessonContents"), where("lessonId","==",lessonId)));
+  await addDoc(collection(db,"lessonContents"),{ lessonId, text, link, order: snap.size + 1, createdAt: Date.now() });
+  loadLessonContents(lessonId);
 }
-
-
 
 async function deleteContent(id){
   if(!confirm("Delete?")) return;
   await deleteDoc(doc(db,"lessonContents",id));
-  location.reload();
+  router();
 }
-
-
 
 async function moveContent(id,dir){
   const ref = doc(db,"lessonContents",id);
   const snap = await getDoc(ref);
-  if(!snap.exists()) return;
-
   const d = snap.data();
   const newOrder = d.order + dir;
-  if(newOrder < 1) return;
-
-  const q = query(
-    collection(db,"lessonContents"),
-    where("lessonId","==",d.lessonId),
-    where("order","==",newOrder)
-  );
-
+  const q = query(collection(db,"lessonContents"),where("lessonId","==",d.lessonId),where("order","==",newOrder));
   const swap = await getDocs(q);
   if(swap.empty) return;
-
   await updateDoc(ref,{order:newOrder});
   await updateDoc(doc(db,"lessonContents",swap.docs[0].id),{order:d.order});
-
   loadLessonContents(d.lessonId);
 }
 
-
-
-
-
-
-
 // ---------- Admin Panel ----------
 async function renderAdmin() {
-  if(!currentUser || currentUser.uid!==ADMIN_UID){ 
-    alert("Access Denied"); 
-    return; 
-  }
-
-  appContainer.innerHTML = `
-    <h2 class="text-2xl font-bold mb-4">Admin Panel</h2>
-    
-    <!-- Search Input -->
-    <input id="admin-search" placeholder="Search by name, email, school..." class="input-field mb-4 w-full">
-
-    <div id="admin-users" class="space-y-2"></div>
-    <div id="admin-user-details" class="mt-6"></div>
-  `;
-
+  appContainer.innerHTML = `<h2 class="text-2xl font-bold mb-4">Admin Panel</h2><input id="admin-search" placeholder="Search..." class="input-field mb-4 w-full"><div id="admin-users" class="space-y-2"></div><div id="admin-user-details" class="mt-6"></div>`;
   const usersSnap = await getDocs(collection(db,'users'));
   let users = usersSnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
-  users.sort((a,b) => a.firstName.localeCompare(b.firstName));
-
   const usersContainer = document.getElementById('admin-users');
-
-  function displayUsers(list){
+  const displayUsers = (list) => {
     usersContainer.innerHTML = '';
     list.forEach(u => {
       const div = document.createElement('div');
       div.className = 'bg-slate-800 p-3 rounded flex justify-between items-center';
-      div.innerHTML = `
-        <div>
-          <strong>${u.firstName} ${u.lastName}</strong> (${u.email})<br>
-          School: ${u.school || '-'} • Exam: ${u.examYear || '-'}
-        </div>
-        <div class="flex gap-2">
-          <button class="liquid-btn text-white view-btn">View</button>
-          <button class="liquid-btn text-white delete-btn">Delete</button>
-        </div>
-      `;
-      div.querySelector('.view-btn').addEventListener('click', () => renderAdminUserDetails(u.id));
-      div.querySelector('.delete-btn').addEventListener('click', () => deleteAdminUser(u.id, `${u.firstName} ${u.lastName}`));
+      div.innerHTML = `<div><strong>${u.firstName} ${u.lastName}</strong> (${u.email})</div><div class="flex gap-2"><button onclick="renderAdminUserDetails('${u.id}')" class="liquid-btn">View</button><button onclick="deleteAdminUser('${u.id}','${u.firstName}')" class="liquid-btn">Delete</button></div>`;
       usersContainer.appendChild(div);
     });
-  }
-
-  displayUsers(users); // initial render
-
-  // ---------- Search ----------
-  const searchInput = document.getElementById('admin-search');
-  searchInput.addEventListener('input', e => {
-    const term = e.target.value.toLowerCase().trim();
-    const filtered = users.filter(u => 
-      (u.firstName + ' ' + u.lastName).toLowerCase().includes(term) ||
-      (u.email || '').toLowerCase().includes(term) ||
-      (u.school || '').toLowerCase().includes(term) ||
-      (u.examYear || '').toLowerCase().includes(term)
-    );
-    displayUsers(filtered);
-  });
+  };
+  displayUsers(users);
+  document.getElementById('admin-search').oninput = e => {
+    const term = e.target.value.toLowerCase();
+    displayUsers(users.filter(u => (u.firstName + ' ' + u.lastName).toLowerCase().includes(term) || u.email.toLowerCase().includes(term)));
+  };
 }
 
-
-  
-
-// ---------- Admin User Details + Charts ----------
-async function renderAdminUserDetails(uid){
+async function renderAdminUserDetails(uid) {
   const detailsContainer = document.getElementById('admin-user-details');
-  const userSnap = await getDoc(doc(db,'users',uid));
-  if(!userSnap.exists()){ detailsContainer.innerHTML='User not found'; return; }
+  
+  // User ගේ දත්ත ලබා ගැනීම
+  const userSnap = await getDoc(doc(db, 'users', uid));
+  if (!userSnap.exists()) return;
   const u = userSnap.data();
 
-  const logsSnap = await getDocs(query(collection(db,'studyLogs'), where('userId','==',uid)));
-  const logs = logsSnap.docs.map(d=>d.data());
+  // Admin Panel එකේ details පෙන්වන HTML එක
+  detailsContainer.innerHTML = `
+    <div class="bg-slate-800 p-6 rounded-xl space-y-4 mt-6 border border-indigo-500">
+      <h3 class="text-2xl font-bold text-indigo-400">${u.firstName} ${u.lastName} ගේ විස්තර</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+        <p><strong>Email:</strong> ${u.email}</p>
+        <p><strong>School:</strong> ${u.school}</p>
+        <p><strong>Phone:</strong> ${u.phone}</p>
+        <p><strong>Exam Year:</strong> ${u.examYear}</p>
+      </div>
+      
+      <div class="space-y-6 mt-4">
+        <div>
+          <h4 class="text-lg font-semibold mb-2 text-white">Weekly Study Progress</h4>
+          <canvas id="admin-weekly-chart" class="bg-slate-900 rounded p-2"></canvas>
+        </div>
+        <div>
+          <h4 class="text-lg font-semibold mb-2 text-white">Monthly Study Progress</h4>
+          <canvas id="admin-monthly-chart" class="bg-slate-900 rounded p-2"></canvas>
+        </div>
+      </div>
+    </div>
+  `;
 
+  // Charts පෙන්වීම සඳහා දත්ත ලබා ගැනීම
+  const snap = await getDocs(query(collection(db, 'studyLogs'), where('userId', '==', uid)));
+  const data = snap.docs.map(d => d.data());
+  const weekly = [], monthly = {};
   const today = new Date();
 
-  // ---------- Weekly Data ----------
-  const weeklyData = [];
-  for(let i=6;i>=0;i--){
-    const d = new Date(); d.setDate(today.getDate()-i);
-    const ds = d.toISOString().slice(0,10);
-    const dayHours = logs.filter(x=>x.date===ds).reduce((a,b)=>a+b.hours,0);
-    weeklyData.push(dayHours || 0);
+  // සතියේ දත්ත සකස් කිරීම
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(today.getDate() - i);
+    const ds = d.toISOString().slice(0, 10);
+    weekly.push(data.filter(x => x.date === ds).reduce((a, b) => a + b.hours, 0));
   }
 
-  // ---------- Monthly Data ----------
-  const monthly = {};
-  logs.forEach(x=>{
-    const month = x.date.slice(0,7);
+  // මාසික දත්ත සකස් කිරීම
+  data.forEach(x => {
+    const month = x.date.slice(0, 7);
     monthly[month] = (monthly[month] || 0) + x.hours;
   });
 
-  // ---------- Render HTML ----------
-  detailsContainer.innerHTML = `
-  <div class="bg-slate-800 p-4 rounded space-y-3 max-w-xl">
-    <h3 class="text-xl font-bold">${u.firstName} ${u.lastName}</h3>
-    <p>Email: ${u.email}</p>
-    <p>Birthday: ${u.birthday}</p>
-    <p>School: ${u.school}</p>
-    <p>Exam: ${u.examYear}</p>
-    <p>Phone: ${u.phone}</p>
+  const months = Object.keys(monthly).sort();
+  const monthValues = months.map(m => monthly[m]);
 
-    <h4 class="mt-4 font-semibold">Weekly Study Hours</h4>
-    <canvas id="admin-weekly-chart" class="bg-slate-700 rounded p-2"></canvas>
-
-    <h4 class="mt-4 font-semibold">Monthly Study Hours</h4>
-    <canvas id="admin-monthly-chart" class="bg-slate-700 rounded p-2"></canvas>
-  </div>`;
-
-  // ---------- Destroy old charts ----------
-  if(window.adminWeeklyChart) window.adminWeeklyChart.destroy();
-  if(window.adminMonthlyChart) window.adminMonthlyChart.destroy();
-
-  // ---------- Create Weekly Chart ----------
-   const ctxW = document.getElementById('admin-weekly-chart').getContext('2d');
-  window.adminWeeklyChart = new Chart(ctxW, {
+  // Weekly Chart එක ඇඳීම
+  const ctxW = document.getElementById('admin-weekly-chart').getContext('2d');
+  new Chart(ctxW, {
     type: 'line',
     data: {
-      labels: Array.from({length:7},(_,i)=>{const d=new Date(); d.setDate(today.getDate()-6+i); return d.toISOString().slice(5,10);}),
-      datasets: [{
-        label: 'Hours',
-        data: weeklyData,
-        borderColor: '#8b5cf6',
-        backgroundColor: 'rgba(139,92,246,0.3)',
-        fill: true,
-      }]
+      labels: Array.from({ length: 7 }, (_, i) => { 
+        const d = new Date(); d.setDate(today.getDate() - 6 + i); 
+        return d.toISOString().slice(5, 10); 
+      }),
+      datasets: [{ label: 'Hours', data: weekly, borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.3)', fill: true }]
     },
-  options: {
-  responsive: true,
-  plugins: {
-    legend: { labels: { color: '#fff' } }
-  },
-  scales: {
-    x: {
-      ticks: { color: '#fff' }
-    },
-    y: {
-      ticks: { color: '#fff' },
-      beginAtZero: true   // ✅ THIS LINE
-    }
-  }
-}
+    options: { plugins: { legend: { labels: { color: '#fff' } } }, scales: { x: { ticks: { color: '#fff' } }, y: { ticks: { color: '#fff' }, beginAtZero: true } } }
   });
 
-
-  // ---------- Create Monthly Chart ----------
-   const ctxM = document.getElementById('admin-monthly-chart').getContext('2d');
-  // Sort months (YYYY-MM) properly
-const sortedMonths = Object.keys(monthly).sort((a, b) => {
-  const [yA, mA] = a.split("-").map(Number);
-  const [yB, mB] = b.split("-").map(Number);
-  return yA === yB ? mA - mB : yA - yB;
-});
-
-// Map values to sorted months
-const monthlyValues = sortedMonths.map(m => monthly[m]);
-
-// Format labels as "Jan 2026", "Feb 2026", etc.
-const monthLabels = sortedMonths.map(m => {
-  const [year, month] = m.split("-");
-  return new Date(year, month - 1).toLocaleString("en", { month: "short", year: "numeric" });
-});
-
-// Create chart
-window.adminMonthlyChart = new Chart(ctxM, {
-  type: 'line',
-  data: {
-    labels: monthLabels,
-    datasets: [{
-      label: 'Hours',
-      data: monthlyValues,
-      borderColor: '#22d3ee',
-      backgroundColor: 'rgba(34,211,238,0.3)',
-      fill: true,
-    }]
-  },
-    options: {
-  responsive: true,
-  plugins: {
-    legend: { labels: { color: '#fff' } }
-  },
-  scales: {
-    x: {
-      ticks: { color: '#fff' }
+  // Monthly Chart එක ඇඳීම
+  const ctxM = document.getElementById('admin-monthly-chart').getContext('2d');
+  new Chart(ctxM, {
+    type: 'bar',
+    data: {
+      labels: months,
+      datasets: [{ label: 'Monthly Hours', data: monthValues, backgroundColor: '#22d3ee' }]
     },
-    y: {
-      ticks: { color: '#fff' },
-      beginAtZero: true   // ✅ THIS LINE
-    }
-  }
-}
+    options: { plugins: { legend: { labels: { color: '#fff' } } }, scales: { x: { ticks: { color: '#fff' } }, y: { ticks: { color: '#fff' }, beginAtZero: true } } }
   });
 }
 
-
-// ---------- Admin Delete ----------
 async function deleteAdminUser(uid,name){
-  if(confirm(`Delete user ${name}?`)){
-    await deleteDoc(doc(db,'users',uid));
-    renderAdmin();
-  }
+  if(confirm(`Delete ${name}?`)){ await deleteDoc(doc(db,'users',uid)); renderAdmin(); }
 }
 
- 
-async function addRecording(){
-  const title = document.getElementById("rec-title").value.trim();
-  const link = document.getElementById("rec-link").value.trim();
-  const subject = document.getElementById("rec-subject").value;
-  const type = document.getElementById("rec-type").value;
-
-  if(!title || !link){
-    alert("Title සහ Link දෙකම දාන්න");
-    return;
-  }
-
-  await addDoc(collection(db,"recordings"),{
-    title,
-    link,
-    subject,
-    type,
-    createdAt: new Date().toISOString()
-  });
-
-  alert("Recording Added!");
-
-  // Clear inputs
-  document.getElementById("rec-title").value = "";
-  document.getElementById("rec-link").value = "";
-
-  // Optionally, render lessons immediately if current subject/type matches
-  renderLessons(subject,type);
-}
-
-
-// <-- FIX: Attach to window for inline onclick -->
 window.renderAdminUserDetails = renderAdminUserDetails;
 window.deleteAdminUser = deleteAdminUser;
-window.renderTimetable = renderTimetable;
-// ---------- FIX RECORDING BUTTONS ----------
-window.renderSubjects = renderSubjects;
-window.renderType = renderType;
-window.renderLessons = renderLessons;
-window.deleteRecording = deleteRecording;
-window.renameLesson = renameLesson;
-window.renderType = renderType;
 window.moveContent = moveContent;
-window.addContent = addContent;
 window.deleteContent = deleteContent;
-window.deleteRecording = deleteRecording;
-
-
-
+window.saveProfile = saveProfile;
 
 </script>
 
@@ -1334,45 +990,21 @@ body{background:black;color:white;min-height:100vh;}
 .liquid-btn::before{content:"";position:absolute;top:0;left:-100%;width:100%;height:100%;background:rgba(255,255,255,0.2);transform:skewX(-20deg);transition:0.5s;}
 .liquid-btn:hover::before{left:100%;}
 .liquid-btn:hover{box-shadow:0 0 20px #0ea5e9;}
-.google-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 0.5rem 1.5rem;
-  border: 2px solid #0ea5e9;
-  border-radius: 0.5rem;
-  background: transparent;
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
-  transition: 0.3s;
-}
-.google-btn:hover {
-  background: rgba(14, 165, 233, 0.1);
-  box-shadow: 0 0 10px #0ea5e9;
-}
-.google-logo {
-  width: 20px;
-  height: 20px;
-}
-
-
+.google-btn { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 0.5rem 1.5rem; border: 2px solid #0ea5e9; border-radius: 0.5rem; background: transparent; color: white; font-weight: bold; cursor: pointer; transition: 0.3s; }
+.google-btn:hover { background: rgba(14, 165, 233, 0.1); box-shadow: 0 0 10px #0ea5e9; }
+.google-logo { width: 20px; height: 20px; }
 </style>
 </head>
 <body class="flex flex-col items-center justify-start p-4 min-h-screen">
 
 <header class="w-full p-4 bg-gradient-to-r from-slate-900 via-indigo-900 to-slate-900 shadow-lg flex justify-between items-center flex-wrap">
-  <h1 class="text-2xl font-bold">StudyTracker</h1>
+  <h1 class="text-2xl font-bold cursor-pointer" onclick="window.location.hash='/home'">StudyTracker</h1>
   <div id="header-greeting" class="text-lg"></div>
   <div id="header-buttons" class="flex gap-2 flex-wrap"></div>
 </header>
 
-<main
-  class="flex-1 w-full max-w-xl sm:max-w-3xl lg:max-w-7xl mt-4 px-2 sm:px-4"
-  id="app-container">
+<main class="flex-1 w-full max-w-xl sm:max-w-3xl lg:max-w-7xl mt-4 px-2 sm:px-4" id="app-container">
 </main>
-
 
 <footer class="text-sm text-slate-400 mt-4 w-full text-center">
   © Owner 2026
@@ -1380,12 +1012,3 @@ body{background:black;color:white;min-height:100vh;}
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
