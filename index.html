@@ -1,5 +1,6 @@
+
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
 <meta charset="UTF-8">
   <meta name="description" content="This is a study plan website for students. Daily study schedules, tips, and learning guidance.">
@@ -14,6 +15,259 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
 
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --primary: #6366f1;
+  --secondary: #0ea5e9;
+  --bg-gradient: radial-gradient(circle at top, #1e1b4b, #000000);
+  --card-bg: rgba(30, 41, 59, 0.7);
+  --text-main: #f1f5f9;
+}
+
+.light {
+  --bg-gradient: radial-gradient(circle at top, #f0f9ff, #e2e8f0);
+  --card-bg: rgba(255, 255, 255, 0.8);
+  --text-main: #1e293b;
+}
+
+body {
+  background: var(--bg-gradient);
+  color: var(--text-main);
+  font-family: 'Inter', sans-serif;
+  transition: all 0.4s ease;
+  min-height: 100vh;
+}
+
+/* Glassmorphism containers */
+#app-container > div, .bg-slate-800 {
+  background: var(--card-bg) !important;
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+  border-radius: 1.5rem !important;
+  padding: 1.5rem !important;
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Updated Liquid Button */
+.liquid-btn {
+  position: relative;
+  padding: 0.6rem 1.5rem;
+  color: white !important;
+  overflow: hidden;
+  border: none;
+  border-radius: 0.8rem;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+}
+
+.liquid-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(99, 102, 241, 0.5);
+  filter: brightness(1.1);
+}
+
+.input-field {
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: rgba(15, 23, 42, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  color: inherit;
+  width: 100%;
+  transition: 0.3s;
+  outline: none;
+}
+
+.input-field:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+header {
+  background: rgba(15, 23, 42, 0.2) !important;
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 2rem;
+}
+
+/* --- Full Screen Auth Design --- */
+.auth-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* Header එකේ උස අඩු කර ඉතිරි මුළු ඉඩම ලබා ගනී */
+    min-height: calc(100vh - 100px); 
+    width: 100%;
+    padding: 20px;
+}
+
+.auth-container {
+    display: flex;
+    width: 100%;
+    max-width: 900px; /* පින්තූරයේ පරිදි පළල වැඩි කරන ලදී */
+    min-height: 500px;
+    background: #081b29;
+    border: 2px solid #0ef;
+    box-shadow: 0 0 25px #0ef;
+    border-radius: 15px;
+    overflow: hidden;
+}
+
+.auth-form-side {
+    flex: 1;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background: #081b29;
+    z-index: 2;
+}
+
+.auth-info-side {
+    flex: 1;
+    background: linear-gradient(135deg, rgba(0, 238, 255, 0.15), #081b29);
+    border-left: 2px solid #0ef;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 30px;
+}
+
+/* Mobile Friendly CSS */
+@media (max-width: 768px) {
+    .auth-wrapper {
+        min-height: auto;
+        padding-top: 50px;
+    }
+    .auth-container {
+        flex-direction: column;
+    }
+}
+
+.auth-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid #fff;
+    color: #fff;
+    padding: 12px 5px;
+    margin: 15px 0;
+    outline: none;
+    font-size: 16px;
+    transition: 0.3s;
+}
+
+.auth-input:focus { border-bottom-color: #0ef; }
+
+.auth-btn {
+    width: 100%;
+    height: 48px;
+    background: #0ef;
+    border: none;
+    border-radius: 40px;
+    color: #081b29;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 0 15px #0ef;
+    margin-top: 20px;
+}
+
+.google-auth-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+    margin-top: 20px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    color: white;
+    font-size: 14px;
+}
+//* --- Custom Toggle Switch --- */
+.theme-switch-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 26px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #334155;
+  transition: .4s;
+  border-radius: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.slider:before {
+  position: absolute;
+  content: "🌙"; /* Dark mode icon */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  height: 18px;
+  width: 18px;
+  left: 4px;
+  bottom: 3.5px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: #0ea5e9;
+  box-shadow: 0 0 10px #0ea5e9;
+}
+
+input:checked + .slider:before {
+  transform: translateX(24px);
+  content: "☀️"; /* Light mode icon */
+}
+
+/* Tablet & Desktop specific adjustments */
+@media (min-width: 768px) {
+  #app-container {
+    padding: 1rem;
+  }
+}
+</style>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -32,8 +286,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, doc, setDoc, addDoc, collection, getDocs, getDoc, query, where, updateDoc, deleteDoc, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-
-
+// Firebase Configuration (From your original code)
 const firebaseConfig = {
     apiKey: "AIzaSyDYhulc8Qz_xGfIeb1g9A6BGO2wwbrz82M",
     authDomain: "study-9c374.firebaseapp.com",
@@ -53,7 +306,35 @@ const appContainer = document.getElementById('app-container');
 const headerGreeting = document.getElementById('header-greeting');
 const headerButtons = document.getElementById('header-buttons');
 
-// ---------- ROUTER SYSTEM ----------
+// Theme Logic
+window.toggleTheme = () => {
+  const html = document.documentElement;
+  const checkbox = document.getElementById('theme-checkbox');
+  
+  if (html.classList.contains('dark')) {
+    html.classList.replace('dark', 'light');
+    localStorage.setItem('theme', 'light');
+  } else {
+    html.classList.replace('light', 'dark');
+    localStorage.setItem('theme', 'dark');
+  }
+};
+
+// Check saved theme
+function applySavedTheme() {
+  const savedTheme = localStorage.getItem('theme') || 'dark';
+  const checkbox = document.getElementById('theme-checkbox');
+  
+  if (savedTheme === 'light') {
+    document.documentElement.classList.replace('dark', 'light');
+    if(checkbox) checkbox.checked = true; // Light mode නම් switch එක on කරයි
+  } else {
+    document.documentElement.classList.replace('light', 'dark');
+    if(checkbox) checkbox.checked = false;
+  }
+}
+applySavedTheme();
+/// ---------- ROUTER SYSTEM ----------
 function navigateTo(path) {
   window.location.hash = path;
 }
@@ -119,14 +400,13 @@ onAuthStateChanged(auth, u=>{
   currentUser = u;
   if(currentUser && currentUser.uid===ADMIN_UID) currentUser.displayName="Admin";
   
-  // Initial Route Load
-  if(!window.location.hash || window.location.hash === '#/') {
-    navigateTo(currentUser ? '/home' : '/welcome');
+  // පද්ධතිය ආරම්භයේදීම හෝ welcome hash එක තිබේ නම් කෙලින්ම login/home වෙත යොමු කරයි
+  if(!window.location.hash || window.location.hash === '#/' || window.location.hash === '#/welcome') {
+    navigateTo(currentUser ? '/home' : '/login'); 
   } else {
     router();
   }
 });
-
 
 // ---------- Header ----------
 function renderHeader(){
@@ -138,6 +418,8 @@ function renderHeader(){
     headerButtons.appendChild(timetableBtn);
     headerButtons.appendChild(homeBtn);
     headerButtons.appendChild(profileBtn);
+    
+   
 
     if(currentUser.uid===ADMIN_UID){
       const adminBtn = createLiquidButton("Admin Panel",()=>navigateTo('/adminpanel'));
@@ -146,15 +428,12 @@ function renderHeader(){
 
     const logoutBtn = createLiquidButton("Logout", async ()=>{
         await signOut(auth);
-        navigateTo('/welcome');
+        navigateTo('/login');
     });
     headerButtons.appendChild(logoutBtn);
 
   }else{
-    const loginBtn = createLiquidButton("Login",()=>navigateTo('/login'));
-    const regBtn = createLiquidButton("Register",()=>navigateTo('/register'));
-    headerButtons.appendChild(loginBtn);
-    headerButtons.appendChild(regBtn);
+   
   }
 }
 
@@ -167,65 +446,40 @@ function createLiquidButton(text, onClick){
   return btn;
 }
 
-// ---------- Welcome ----------
-function renderWelcome(){
-  appContainer.innerHTML = `
-  <div class="flex flex-col items-center justify-center h-full gap-6">
-    <h2 class="text-3xl font-bold text-white text-center">Welcome to Study Tracker System</h2>
-    <div class="flex gap-6 flex-wrap mt-4">
-      <button id="welcome-login-btn" class="liquid-btn px-6 py-2 text-white">Login</button>
-      <button id="welcome-register-btn" class="liquid-btn px-6 py-2 text-white">Register</button>
-    </div>
-  </div>`;
-
-  document.getElementById('welcome-login-btn').onclick = () => navigateTo('/login');
-  document.getElementById('welcome-register-btn').onclick = () => navigateTo('/register');
-}
 
 // ---------- Register ----------
 function renderRegister(){
   appContainer.innerHTML = `
-  <div class="bg-slate-800 p-6 rounded-xl w-full max-w-md mx-auto space-y-3">
-    <h2 class="text-2xl font-bold">Register</h2>
-    <form id="reg-form" class="flex flex-col gap-2">
+  <div class="auth-wrapper">
+    <div class="auth-container">
+      <div class="auth-form-side">
+        <h2 class="text-3xl font-bold text-white mb-6 uppercase tracking-wider">Sign Up</h2>
+        <form id="register-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <input type="text" name="name" placeholder="Full Name" class="auth-input col-span-2" required>
+          
+          <input type="text" id="birthday" name="birthday" placeholder="Birthday" onfocus="(this.type='date')" class="auth-input" required>
+          <input type="text" name="school" placeholder="School" class="auth-input" required>
+          
+          <input type="email" name="email" placeholder="Email" class="auth-input" required>
+          <input type="text" name="phone" placeholder="Phone (07x xxxxxxx)" class="auth-input" required>
+          
+          <input type="password" name="password" placeholder="Password" class="auth-input col-span-2" required>
+          
+          <button type="submit" class="auth-btn col-span-2">Create Account</button>
+          <div id="reg-error" class="text-red-400 text-xs mt-2 col-span-2 text-center"></div>
+        </form>
+        <p class="mt-4 text-sm text-center text-white">Already have an account? <a href="#/login" class="text-cyan-400 font-bold underline">Login</a></p>
+      </div>
       
-      <label for="firstName">First Name</label>
-      <input id="firstName" type="text" name="firstName" placeholder="First Name" class="input-field" required>
-      
-      <label for="lastName">Last Name</label>
-      <input id="lastName" type="text" name="lastName" placeholder="Last Name" class="input-field" required>
-      
-      <label for="birthday">Birthday</label>
-      <input id="birthday" type="date" name="birthday" class="input-field" required>
-      
-      <label for="school">School</label>
-      <input id="school" type="text" name="school" placeholder="School" class="input-field" required>
-      
-      <label for="phone">Phone</label>
-      <input id="phone" type="text" name="phone" placeholder="Phone" class="input-field" required>
-      
-      <label for="examYear">Exam Year</label>
-      <select id="examYear" name="examYear" class="input-field" required>
-        <option>2026 A/L</option>
-        <option>2027 A/L</option>
-        <option>2028 A/L</option>
-      </select>
-      
-      <label for="email">Email</label>
-      <input id="email" type="email" name="email" placeholder="Email" class="input-field" required>
-      
-      <label for="password">Password</label>
-      <input id="password" type="password" name="password" placeholder="Password" class="input-field" required>
-      
-      <button type="submit" class="liquid-btn w-full">Register</button>
-      <div id="reg-error" class="text-red-400"></div>
-    </form>
-        <button class="google-btn w-full mt-3" id="google-register">
-     <img src="https://img.freepik.com/premium-vector/google-logo-icon-transparent-background_1273375-1570.jpg?semt=ais_hybrid&w=740&q=80" class="google-logo" alt="Google logo">
-     Continue with Google
-       </button>
+      <div class="auth-info-side">
+        <h2 class="text-4xl font-bold text-white mb-4 uppercase">Join Us!</h2>
+        <p class="text-gray-300 text-sm leading-relaxed px-6">
+          අදම ලියාපදිංචි වී ඔබගේ අධ්‍යාපන ගමන අලුත් මුහුණුවරකින් ආරම්භ කරන්න.
+        </p>
+      </div>
+    </div>
+  </div>`;
 
-    </div>`;
   document.getElementById('reg-form').onsubmit = async e=>{
     e.preventDefault();
     const f = e.target;
@@ -249,38 +503,32 @@ function renderRegister(){
 
 // ---------- Login ----------
 function renderLogin(){
-  appContainer.innerHTML = `
-  <div id="auth-section" class="bg-slate-800 p-6 rounded-xl w-full max-w-md mx-auto space-y-3">
   
-  <h2 class="text-2xl font-bold">Login</h2>
-
-  <form id="login-form" class="flex flex-col gap-2">
-    <input type="email" name="email" placeholder="Email" class="input-field" required>
-    <input type="password" name="password" placeholder="Password" class="input-field" required>
-
-    <div class="flex justify-between items-center mt-2">
-      <button type="submit" class="liquid-btn">Login</button>
-      <button type="button" onclick="handleForgotPassword()" class="text-sm text-slate-300 hover:text-white underline">Forgot?</button>
+  appContainer.innerHTML = `
+  <div class="auth-wrapper">
+    <div class="auth-container">
+      <div class="auth-form-side">
+        <h2 class="text-3xl font-bold text-white mb-8">Login</h2>
+        <form id="login-form">
+          <input type="email" name="email" placeholder="Email" class="auth-input" required>
+          <input type="password" name="password" placeholder="Password" class="auth-input" required>
+          <button type="submit" class="auth-btn">Login</button>
+          <div id="login-error" class="text-red-400 text-xs mt-2"></div>
+        </form>
+        <p class="mt-4 text-sm text-white">Don't have an account? <a href="#/register" class="text-cyan-400 underline">Sign Up</a></p>
+        
+        <button id="google-login" class="google-auth-btn">
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18">
+          Continue with Google
+        </button>
+      </div>
+      <div class="auth-info-side">
+        <h2 class="text-4xl font-bold text-white mb-4 uppercase">Welcome Back!</h2>
+        <p class="text-gray-300 text-sm leading-relaxed">ඔබේ අධ්‍යයන කටයුතු නිවැරදිව කළමනාකරණය කරගැනීමට අදම සම්බන්ධ වන්න.</p>
+      </div>
     </div>
+  </div>`;
 
-    <div id="login-error" class="text-red-400"></div>
-  </form>
-    <button id="google-login" class="google-btn">
-  <img src="https://img.freepik.com/premium-vector/google-logo-icon-transparent-background_1273375-1570.jpg?semt=ais_hybrid&w=740&q=80" alt="Google" class="google-logo">
-  Continue with Google
-</button>
-
-
-
-  <div id="complete-profile" style="display:none" class="mt-4 space-y-2">
-    <h2 class="text-xl font-bold">Complete Your Profile</h2>
-    <input id="profile-name" placeholder="Full Name" class="input-field">
-    <input id="profile-class" placeholder="Class / Grade" class="input-field">
-    <input id="profile-school" placeholder="School" class="input-field">
-    <button onclick="saveProfile()" class="liquid-btn w-full">Save</button>
-  </div>
-
-</div>`;
 document.getElementById('login-form').onsubmit = async e=>{
   e.preventDefault();
   const f = e.target;
@@ -981,37 +1229,31 @@ window.deleteAdminUser = deleteAdminUser;
 window.moveContent = moveContent;
 window.deleteContent = deleteContent;
 window.saveProfile = saveProfile;
-
 </script>
-
-<style>
-body{background:black;color:white;min-height:100vh;}
-.input-field{padding:0.5rem;border-radius:0.5rem;background:#1e293b;border:none;color:white;width:100%;}
-.liquid-btn{position:relative;padding:0.5rem 1.5rem;color:white;overflow:hidden;border:none;border-radius:1rem;background:#0ea5e9;cursor:pointer;font-weight:bold;margin:0.2rem;transition:0.3s;}
-.liquid-btn::before{content:"";position:absolute;top:0;left:-100%;width:100%;height:100%;background:rgba(255,255,255,0.2);transform:skewX(-20deg);transition:0.5s;}
-.liquid-btn:hover::before{left:100%;}
-.liquid-btn:hover{box-shadow:0 0 20px #0ea5e9;}
-.google-btn { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 0.5rem 1.5rem; border: 2px solid #0ea5e9; border-radius: 0.5rem; background: transparent; color: white; font-weight: bold; cursor: pointer; transition: 0.3s; }
-.google-btn:hover { background: rgba(14, 165, 233, 0.1); box-shadow: 0 0 10px #0ea5e9; }
-.google-logo { width: 20px; height: 20px; }
-</style>
 </head>
-<body class="flex flex-col items-center justify-start p-4 min-h-screen">
 
-<header class="w-full p-4 bg-gradient-to-r from-slate-900 via-indigo-900 to-slate-900 shadow-lg flex justify-between items-center flex-wrap">
-  <h1 class="text-2xl font-bold cursor-pointer" onclick="window.location.hash='/home'">StudyTracker</h1>
-  <div id="header-greeting" class="text-lg"></div>
+<body class="flex flex-col items-center justify-start min-h-screen">
+<header class="w-full p-4 flex justify-between items-center flex-wrap gap-4">
+  <div class="flex items-center gap-4">
+    <h1 class="text-2xl font-bold cursor-pointer bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-cyan-400" onclick="window.location.hash='/home'">StudyTracker</h1>
+    
+    <div class="theme-switch-wrapper">
+      <label class="switch">
+        <input type="checkbox" id="theme-checkbox" onclick="toggleTheme()">
+        <span class="slider"></span>
+      </label>
+    </div>
+  </div>
+  <div id="header-greeting" class="text-sm font-medium opacity-80"></div>
   <div id="header-buttons" class="flex gap-2 flex-wrap"></div>
 </header>
 
-<main class="flex-1 w-full max-w-xl sm:max-w-3xl lg:max-w-7xl mt-4 px-2 sm:px-4" id="app-container">
-</main>
+<main class="flex-1 w-full max-w-4xl mt-2 px-4" id="app-container">
+  </main>
 
-<footer class="text-sm text-slate-400 mt-4 w-full text-center">
-  © Owner 2026
+<footer class="text-xs opacity-50 my-6">
+  © Owner 2026 • Designed for Excellence
 </footer>
 
 </body>
 </html>
-
-
