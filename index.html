@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
@@ -284,7 +285,7 @@ import {
   GoogleAuthProvider,
   signInWithPopup
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, addDoc, collection, getDocs, getDoc, query, where, updateDoc, deleteDoc, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, addDoc, collection, getDocs, getDoc, query, where, updateDoc, deleteDoc, orderBy, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // Firebase Configuration (From your original code)
 const firebaseConfig = {
@@ -1078,48 +1079,141 @@ async function loadLessonContents(lessonId){
   const list = document.getElementById("content-list");
   list.innerHTML = "";
   const snap = await getDocs(query(collection(db,"lessonContents"),where("lessonId","==",lessonId),orderBy("order","asc")));
+  
   snap.forEach(docSnap=>{
     const d = docSnap.data();
     const id = docSnap.id;
     const div = document.createElement("div");
-    div.className = "border p-3 flex justify-between items-center";
-    div.innerHTML = `<a href="${d.link}" target="_blank" class="text-blue-600 underline">${d.text}</a>`;
+    div.className = "border p-3 flex justify-between items-center mb-2 bg-slate-800 rounded-lg";
+    div.innerHTML = `<a href="${d.link}" target="_blank" class="text-blue-400 hover:underline font-medium">${d.text}</a>`;
+    
     if(currentUser?.uid === ADMIN_UID){
-      const bc = document.createElement("div"); bc.className = "flex gap-2";
-      bc.innerHTML = `<button onclick="moveContent('${id}',-1)">⬆️</button><button onclick="moveContent('${id}',1)">⬇️</button><button onclick="deleteContent('${id}')">🗑️</button>`;
+      const bc = document.createElement("div"); 
+      bc.className = "flex gap-2 flex-wrap";
+
+            // Edit Button
+          const editBtn = document.createElement("button");
+           editBtn.innerHTML = "✏️";
+          editBtn.className = "hover:scale-110 transition-transform";
+          editBtn.onclick = () => editContent(id, d.text, d.link, d.lessonId);
+      
+      // Up Button
+      const upBtn = document.createElement("button");
+      upBtn.innerHTML = "⬆️";
+      upBtn.onclick = () => moveContent(id, -1);
+      
+      // Down Button
+      const downBtn = document.createElement("button");
+      downBtn.innerHTML = "⬇️";
+      downBtn.onclick = () => moveContent(id, 1);
+      
+      // Delete Button
+      const delBtn = document.createElement("button");
+      delBtn.innerHTML = "🗑️";
+      delBtn.onclick = () => deleteContent(id);
+ 
+      bc.appendChild(editBtn);
+      bc.appendChild(upBtn);
+      bc.appendChild(downBtn);
+      bc.appendChild(delBtn);
       div.appendChild(bc);
     }
     list.appendChild(div);
   });
 }
 
+// 1. Content එකතු කිරීම
 async function addContent(lessonId){
   const text = document.getElementById("content-text").value.trim();
   const link = document.getElementById("content-link").value.trim();
   if(!text || !link) return;
+  
   const snap = await getDocs(query(collection(db,"lessonContents"), where("lessonId","==",lessonId)));
-  await addDoc(collection(db,"lessonContents"),{ lessonId, text, link, order: snap.size + 1, createdAt: Date.now() });
+  // order එක අනිවාර්යයෙන්ම Number එකක් ලෙස ලබා දීම
+  await addDoc(collection(db,"lessonContents"),{ 
+    lessonId, 
+    text, 
+    link, 
+    order: Number(snap.size + 1), 
+    createdAt: Date.now() 
+  });
+  
+  document.getElementById("content-text").value = "";
+  document.getElementById("content-link").value = "";
   loadLessonContents(lessonId);
 }
 
-async function deleteContent(id){
-  if(!confirm("Delete?")) return;
-  await deleteDoc(doc(db,"lessonContents",id));
-  router();
+// 2. Content එක Edit කිරීම (Text සහ Link දෙකම)
+async function editContent(id, oldText, oldLink, lessonId) {
+    const newText = prompt("අලුත් නම:", oldText);
+    if (newText === null || newText.trim() === "") return;
+
+    const newLink = prompt("අලුත් ලින්ක් එක:", oldLink);
+    if (newLink === null || newLink.trim() === "") return;
+
+    try {
+        await updateDoc(doc(db, "lessonContents", id), {
+            text: newText.trim(),
+            link: newLink.trim()
+        });
+        loadLessonContents(lessonId);
+    } catch (err) {
+        alert("Error: " + err.message);
+    }
 }
 
-async function moveContent(id,dir){
-  const ref = doc(db,"lessonContents",id);
-  const snap = await getDoc(ref);
-  const d = snap.data();
-  const newOrder = d.order + dir;
-  const q = query(collection(db,"lessonContents"),where("lessonId","==",d.lessonId),where("order","==",newOrder));
-  const swap = await getDocs(q);
-  if(swap.empty) return;
-  await updateDoc(ref,{order:newOrder});
-  await updateDoc(doc(db,"lessonContents",swap.docs[0].id),{order:d.order});
-  loadLessonContents(d.lessonId);
+// 3. Order එක මාරු කිරීම (⬆️⬇️)
+async function moveContent(id, dir) {
+  try {
+    const ref = doc(db, "lessonContents", id);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return;
+    const lessonId = snap.data().lessonId;
+
+    // Index ගැටලුව මගහැරීමට සරල Query එකක් භාවිතා කිරීම
+    const q = query(collection(db, "lessonContents"), where("lessonId", "==", lessonId));
+    const querySnapshot = await getDocs(q);
+    
+    let items = [];
+    querySnapshot.forEach(doc => {
+      items.push({ id: doc.id, ...doc.data() });
+    });
+
+    // Order එක අනුව පිළිවෙලට සකස් කිරීම
+    items.sort((a, b) => Number(a.order) - Number(b.order));
+
+    const currentIndex = items.findIndex(item => item.id === id);
+    const targetIndex = currentIndex + dir;
+
+    if (targetIndex >= 0 && targetIndex < items.length) {
+      const currentItem = items[currentIndex];
+      const targetItem = items[targetIndex];
+
+      const batch = writeBatch(db);
+      
+      // Order අගයන් දෙක මාරු කිරීම
+      batch.update(doc(db, "lessonContents", currentItem.id), { order: Number(targetItem.order) });
+      batch.update(doc(db, "lessonContents", targetItem.id), { order: Number(currentItem.order) });
+
+      await batch.commit();
+      loadLessonContents(lessonId); // Refresh list
+    }
+  } catch (error) {
+    console.error("Error moving content:", error);
+    alert("පිළිවෙල මාරු කිරීමේදී දෝෂයක් විය.");
+  }
 }
+
+
+async function deleteContent(id){
+  if(!confirm("මෙම කොටස මකා දැමීමට අවශ්‍යද?")) return;
+  const snap = await getDoc(doc(db,"lessonContents",id));
+  const lessonId = snap.data().lessonId;
+  await deleteDoc(doc(db,"lessonContents",id));
+  loadLessonContents(lessonId); // සම්පූර්ණ page එක reload නොවී ලිස්ට් එක පමණක් refresh කරයි
+}
+
+
 
 // ---------- Admin Panel ----------
 async function renderAdmin() {
@@ -1228,10 +1322,12 @@ async function deleteAdminUser(uid,name){
   if(confirm(`Delete ${name}?`)){ await deleteDoc(doc(db,'users',uid)); renderAdmin(); }
 }
 
+
 window.renderAdminUserDetails = renderAdminUserDetails;
 window.deleteAdminUser = deleteAdminUser;
+window.editContent = editContent;
 window.moveContent = moveContent;
-window.deleteContent = deleteContent;
+window.deleteContent = deleteContent;;
 window.saveProfile = saveProfile;
 </script>
 </head>
