@@ -313,7 +313,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+
 const googleProvider = new GoogleAuthProvider();
+const NILANTHA_MODERATORS = ["vn9a2rNQgbbYPyHRS2c28XwlMRJ3", "2M8JB3hF4GQdBIwHfzp2grjBVCJ3"];
 const ADMIN_UID = "m1rddMA36WbVunFW3B0BzuqOwyI2";
 
 let currentUser = null;
@@ -466,7 +468,7 @@ function createLiquidButton(text, onClick){
 }
 
 
-// ---------- Register ----------
+
 // ---------- Register ----------
 function renderRegister(){
   appContainer.innerHTML = `
@@ -969,11 +971,17 @@ function renderSubjects(){
         <img src="https://static.indeepa.lk/lecturer/6/en/6522475ddf2bf.jpg" class="w-24 h-24 rounded-xl object-cover">
         <span class="text-xl font-bold">Chemistry - Amila Dasanayake</span>
       </button>
+            <button id="btn-physics-nilantha" class="flex items-center gap-4 bg-slate-800 p-4 rounded-xl hover:bg-slate-700">
+        <img src="https://susipvan.lk/img/teachers/2/Nilantha-Jayasooriya.jpg" class="w-24 h-24 rounded-xl object-cover">
+         <span class="text-xl font-bold ">Physics - Nilantha Jayasooriya</span>
+      </button>
+	
     </div>
   `;
   document.getElementById("btn-maths").onclick = () => navigateTo('/recording/maths');
   document.getElementById("btn-physics").onclick = () => navigateTo('/recording/physics');
   document.getElementById("btn-chemistry").onclick = () => navigateTo('/recording/chemistry');
+    document.getElementById("btn-physics-nilantha").onclick = () => navigateTo('/recording/physics-nilantha');
 }
 
 function renderType(subject){
@@ -982,10 +990,12 @@ function renderType(subject){
     <div class="flex gap-6">
       <button class="liquid-btn text-xl px-8 py-4" id="btn-theory">Theory</button>
       <button class="liquid-btn text-xl px-8 py-4" id="btn-revision">Revision</button>
+            <button class="liquid-btn text-xl px-8 py-4 bg-red-600" id="btn-paper">Paper</button>
     </div>
   `;
   document.getElementById("btn-theory").onclick = ()=> navigateTo(`/recording/${subject}/theory`);
   document.getElementById("btn-revision").onclick = ()=> navigateTo(`/recording/${subject}/revision`);
+    document.getElementById("btn-paper").onclick = ()=> navigateTo(`/recording/${subject}/paper`);
 }
 
 
@@ -996,10 +1006,13 @@ async function renderLessons(subject, type){
   `;
   const list = document.getElementById("lessons-list");
   let lessonsData = {};
-  try{
+  try {
     const snap = await getDocs(query(collection(db,"lessons"),where("subject","==",subject),where("type","==",type)));
     snap.forEach(doc=>{ lessonsData[doc.data().day] = doc.data().title; });
-  }catch(err){ console.warn(err); }
+  } catch(err){ console.warn(err); }
+
+  const currentUid = auth.currentUser ? auth.currentUser.uid : null;
+  const isNilanthaMod = NILANTHA_MODERATORS.includes(currentUid) && subject === 'physics-nilantha';
 
   for(let i=1;i<=20;i++){
     const day = String(i).padStart(2,"0");
@@ -1011,7 +1024,9 @@ async function renderLessons(subject, type){
     lessonBtn.textContent = title;
     lessonBtn.onclick = ()=> navigateTo(`/recording/${subject}/${type}/lesson${day}`);
     row.appendChild(lessonBtn);
-    if(currentUser && currentUser.uid === ADMIN_UID){
+
+    // Moderator ට දින නම වෙනස් කිරීමට පමණක් අවසරය දීම
+    if(currentUid === ADMIN_UID || isNilanthaMod){
       const editBtn = document.createElement("button");
       editBtn.className = "liquid-btn bg-yellow-500";
       editBtn.textContent = "✏️";
@@ -1023,28 +1038,56 @@ async function renderLessons(subject, type){
 }
 
 async function renameLesson(i, subject, type){
+  const currentUid = auth.currentUser ? auth.currentUser.uid : null;
+  // Moderator කෙනෙක්ද සහ ඔහු Nilantha සර්ගේ විෂයද බලනවා
+  const isNilanthaMod = NILANTHA_MODERATORS.includes(currentUid) && subject === 'physics-nilantha';
+
+  // ප්‍රධාන Admin හෝ අදාළ Moderator නොවේ නම් ක්‍රියාව නවත්වනවා
+  if (currentUid !== ADMIN_UID && !isNilanthaMod) {
+    alert("ඔබට මෙම විෂයෙහි දත්ත වෙනස් කිරීමට අවසර නැත!");
+    return;
+  }
+
   const day = String(i).padStart(2, "0");
   const newName = prompt("New lesson name:");
   if(!newName) return;
-  await setDoc(doc(db, "lessons", `${subject}_${type}_${day}`), { title: newName, subject, type, day });
-  renderLessons(subject, type);
+
+  try {
+    // Firestore එකේ දත්ත සේව් කිරීම
+    await setDoc(doc(db, "lessons", `${subject}_${type}_${day}`), { 
+      title: newName, 
+      subject, 
+      type, 
+      day,
+      updatedAt: Date.now() 
+    });
+    
+    // පිටුව refresh කිරීම
+    renderLessons(subject, type);
+  } catch(err) {
+    alert("Error: " + err.message);
+  }
 }
 
 async function openLessonPage(subject, type, day){
   const lessonId = `${subject}_${type}_${day}`;
+  const currentUid = auth.currentUser ? auth.currentUser.uid : null;
+  const isNilanthaMod = NILANTHA_MODERATORS.includes(currentUid) && subject === 'physics-nilantha';
+  
   appContainer.innerHTML = `
     <h2 class="text-2xl font-bold mb-4">Lesson ${day}</h2>
     <div id="content-list" class="flex flex-col gap-3 mb-6"></div>
-    ${currentUser?.uid === ADMIN_UID ? `
+    ${(currentUid === ADMIN_UID || isNilanthaMod) ? `
       <div class="flex gap-2">
-        <input id="content-text" placeholder="Text" class="border p-2 flex-1 text-black">
-        <input id="content-link" placeholder="Link" class="border p-2 flex-1 text-black">
+        <input id="content-text" placeholder="Text (e.g. Tute 01)" class="border p-2 flex-1 text-black rounded">
+        <input id="content-link" placeholder="Link (Drive/YT)" class="border p-2 flex-1 text-black rounded">
         <button id="add-content-btn" class="liquid-btn">Add</button>
       </div>
     ` : ``}
   `;
-  loadLessonContents(lessonId);
-  if(currentUser?.uid === ADMIN_UID){
+  loadLessonContents(lessonId); // මෙහිදී Edit/Delete බොත්තම් Admin ට පමණක් පෙනේ
+  
+  if(currentUid === ADMIN_UID || isNilanthaMod){
     document.getElementById("add-content-btn").onclick = () => addContent(lessonId);
   }
 }
@@ -1098,12 +1141,21 @@ async function loadLessonContents(lessonId){
 
 // 1. Content එකතු කිරීම
 async function addContent(lessonId){
+  const currentUid = auth.currentUser ? auth.currentUser.uid : null;
+  // පාඩමේ නමින් subject එක වෙන්කර ගැනීම (e.g. physics-nilantha_theory_01)
+  const subject = lessonId.split('_')[0];
+  const isNilanthaMod = NILANTHA_MODERATORS.includes(currentUid) && subject === 'physics-nilantha';
+
+  if (currentUid !== ADMIN_UID && !isNilanthaMod) {
+    alert("අවසර නැත!");
+    return;
+  }
+
   const text = document.getElementById("content-text").value.trim();
   const link = document.getElementById("content-link").value.trim();
   if(!text || !link) return;
   
   const snap = await getDocs(query(collection(db,"lessonContents"), where("lessonId","==",lessonId)));
-  // order එක අනිවාර්යයෙන්ම Number එකක් ලෙස ලබා දීම
   await addDoc(collection(db,"lessonContents"),{ 
     lessonId, 
     text, 
@@ -1331,5 +1383,3 @@ window.saveProfile = saveProfile;
 
 </body>
 </html>
-
-
