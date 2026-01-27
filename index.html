@@ -542,7 +542,13 @@ function renderLogin(){
           <button type="submit" class="auth-btn">Login</button>
           <div id="login-error" class="text-red-400 text-xs mt-2"></div>
         </form>
-        <p class="mt-4 text-sm text-white">Don't have an account? <a href="#/register" class="text-cyan-400 underline">Sign Up</a></p>
+        
+        <button id="forgot-password-btn" class="text-xs text-indigo-400 hover:underline mt-4 block mx-auto">
+          මුරපදය අමතකද? (Forgot Password?)
+        </button>
+
+        <p class="mt-4 text-sm text-white text-center">Don't have an account? <a href="#/register" class="text-cyan-400 underline">Sign Up</a></p>
+        
         <button id="google-login" class="google-auth-btn">
           <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18">
           Continue with Google
@@ -555,17 +561,21 @@ function renderLogin(){
     </div>
   </div>`;
 
-document.getElementById('login-form').onsubmit = async e=>{
-  e.preventDefault();
-  const f = e.target;
-  try{
-    const cred = await signInWithEmailAndPassword(auth,f.email.value,f.password.value);
-    currentUser = cred.user;       
-    navigateTo('/home');
-  }catch(err){ 
-    document.getElementById('login-error').textContent = err.message; 
-  }
-};
+  // Login Form Submission
+  document.getElementById('login-form').onsubmit = async e=>{
+    e.preventDefault();
+    const f = e.target;
+    try{
+      const cred = await signInWithEmailAndPassword(auth,f.email.value,f.password.value);
+      currentUser = cred.user;       
+      navigateTo('/home');
+    }catch(err){ 
+      document.getElementById('login-error').textContent = err.message; 
+    }
+  };
+
+  // Forgot Password Button Action
+  document.getElementById('forgot-password-btn').onclick = handleForgotPassword;
 
 
   document.getElementById("google-login").onclick = async () => {
@@ -623,27 +633,17 @@ function renderCompleteProfile(user) {
 
 // ---------- Forget ----------
 async function handleForgotPassword() {
-  const email = prompt("කරුණාකර ඔබගේ Email ලිපිනය ඇතුළත් කරන්න:");
+  const email = prompt("මුරපදය අලුත් කිරීමට ඔබ ලියාපදිංචි වූ Email ලිපිනය ඇතුළත් කරන්න:");
   if (!email) return;
 
   try {
     await sendPasswordResetEmail(auth, email);
-    alert("Password reset කිරීමට අවශ්‍ය ලින්ක් එක ඔබගේ Email ලිපිනයට එවනු ලැබුවා. කරුණාකර ඔබගේ Inbox/Spam පරීක්ෂා කරන්න.");
-  } catch (err) {
-    let errorMsg = "දෝෂයක් සිදු විය: ";
-    if (err.code === 'auth/user-not-found') {
-      errorMsg += "මෙම Email ලිපිනයෙන් ගිණුමක් සොයාගත නොහැක.";
-    } else if (err.code === 'auth/invalid-email') {
-      errorMsg += "Email ලිපිනය නිවැරදි නැත.";
-    } else {
-      errorMsg += err.message;
-    }
-    alert(errorMsg);
+    alert("මුරපදය අලුත් කිරීමට අවශ්‍ය උපදෙස් ඔබගේ Email ලිපිනයට එවා ඇත. කරුණාකර Inbox හෝ Spam පරීක්ෂා කරන්න.");
+  } catch (error) {
+    console.error(error);
+    alert("දෝෂයක් සිදුවිය: " + error.message);
   }
 }
-
-// මෙය window object එකට සම්බන්ධ කරමු එවිට HTML එකෙන් access කළ හැක
-window.handleForgotPassword = handleForgotPassword;
 
 // ---------- Home ----------
 async function renderHome(){
@@ -1383,3 +1383,5 @@ window.saveProfile = saveProfile;
 
 </body>
 </html>
+
+
