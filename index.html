@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
@@ -154,10 +152,26 @@ header {
 @media (max-width: 768px) {
     .auth-wrapper {
         min-height: auto;
-        padding-top: 50px;
+        padding: 50px 20px; /* උඩින් සහ දෙපැත්තෙන් ඉඩ තැබීමට */
     }
+
     .auth-container {
         flex-direction: column;
+        height: auto; 
+        max-height: none; /* උස සීමා නොකිරීමට */
+        overflow-y: visible; /* Scroll නොවී සම්පූර්ණයෙන් පෙන්වීමට */
+    }
+
+    .auth-form-side {
+        width: 100%;
+        padding: 30px 20px;
+    }
+
+    .auth-info-side {
+        order: 2; /* Form එකට පසුව පෙන්වීමට */
+        width: 100%;
+        padding: 40px 20px;
+        display: block; /* සමහර විට mobile වලදී hide කර ඇත්නම් පෙන්වීමට */
     }
 }
 
@@ -453,25 +467,30 @@ function createLiquidButton(text, onClick){
 
 
 // ---------- Register ----------
+// ---------- Register ----------
 function renderRegister(){
   appContainer.innerHTML = `
   <div class="auth-wrapper">
     <div class="auth-container">
       <div class="auth-form-side">
         <h2 class="text-3xl font-bold text-white mb-6 uppercase tracking-wider">Sign Up</h2>
-        <form id="register-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <input type="text" name="name" placeholder="Full Name" class="auth-input col-span-2" required>
+        <form id="register-form" class="flex flex-col gap-2">
+          <input type="text" name="name" placeholder="Full Name" class="auth-input" required>
           
-          <input type="text" id="birthday" name="birthday" placeholder="Birthday" onfocus="(this.type='date')" class="auth-input" required>
-          <input type="text" name="school" placeholder="School" class="auth-input" required>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <input type="text" id="birthday" name="birthday" placeholder="Birthday" onfocus="(this.type='date')" class="auth-input" required>
+            <input type="text" name="school" placeholder="School" class="auth-input" required>
+          </div>
           
-          <input type="email" name="email" placeholder="Email" class="auth-input" required>
-          <input type="text" name="phone" placeholder="Phone (07x xxxxxxx)" class="auth-input" required>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <input type="email" name="email" placeholder="Email" class="auth-input" required>
+            <input type="text" name="phone" placeholder="Phone (07x xxxxxxx)" class="auth-input" required>
+          </div>
           
-          <input type="password" name="password" placeholder="Password" class="auth-input col-span-2" required>
+          <input type="password" name="password" placeholder="Password" class="auth-input" required>
           
-          <button type="submit" class="auth-btn col-span-2">Create Account</button>
-          <div id="reg-error" class="text-red-400 text-xs mt-2 col-span-2 text-center"></div>
+          <button type="submit" class="auth-btn">Create Account</button>
+          <div id="reg-error" class="text-red-400 text-xs mt-2 text-center"></div>
         </form>
         <p class="mt-4 text-sm text-center text-white">Already have an account? <a href="#/login" class="text-cyan-400 font-bold underline">Login</a></p>
       </div>
@@ -485,34 +504,35 @@ function renderRegister(){
     </div>
   </div>`;
 
-  document.getElementById('reg-form').onsubmit = async e=>{
+  document.getElementById('register-form').onsubmit = async e => {
     e.preventDefault();
     const f = e.target;
-    try{
-      const cred = await createUserWithEmailAndPassword(auth,f.email.value,f.password.value);
-      await updateProfile(cred.user,{displayName: f.firstName.value + ' ' + f.lastName.value});
-      await setDoc(doc(db,'users',cred.user.uid),{
-        firstName:f.firstName.value,
-        lastName:f.lastName.value,
-        birthday:f.birthday.value,
-        school:f.school.value,
-        phone:f.phone.value,
-        examYear:f.examYear.value,
-        email:f.email.value,
-        createdAt:new Date().toISOString()
+    try {
+      const cred = await createUserWithEmailAndPassword(auth, f.email.value, f.password.value);
+      await updateProfile(cred.user, { displayName: f.name.value });
+      await setDoc(doc(db, 'users', cred.user.uid), {
+        firstName: f.name.value,
+        lastName: "",
+        birthday: f.birthday.value,
+        school: f.school.value,
+        phone: f.phone.value,
+        email: f.email.value,
+        createdAt: new Date().toISOString()
       });
       navigateTo('/home');
-    }catch(err){ document.getElementById('reg-error').textContent = err.message; }
+    } catch(err) { 
+      document.getElementById('reg-error').textContent = err.message; 
+    }
   };
- }
+}
+
 
 // ---------- Login ----------
 function renderLogin(){
-  
   appContainer.innerHTML = `
   <div class="auth-wrapper">
     <div class="auth-container">
-      <div class="auth-form-side">
+      <div class="auth-form-side" id="login-side">
         <h2 class="text-3xl font-bold text-white mb-8">Login</h2>
         <form id="login-form">
           <input type="email" name="email" placeholder="Email" class="auth-input" required>
@@ -521,14 +541,13 @@ function renderLogin(){
           <div id="login-error" class="text-red-400 text-xs mt-2"></div>
         </form>
         <p class="mt-4 text-sm text-white">Don't have an account? <a href="#/register" class="text-cyan-400 underline">Sign Up</a></p>
-        
         <button id="google-login" class="google-auth-btn">
           <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18">
           Continue with Google
         </button>
       </div>
       <div class="auth-info-side">
-        <h2 class="text-4xl font-bold text-white mb-4 uppercase">Welcome Back!</h2>
+        <h2 class="text-4xl font-bold text-white mb-4 uppercase">Welcome!</h2>
         <p class="text-gray-300 text-sm leading-relaxed">Join now to manage your studies properly.</p>
       </div>
     </div>
@@ -556,93 +575,48 @@ document.getElementById('login-form').onsubmit = async e=>{
     const snap = await getDoc(ref);
 
     if (snap.exists()) {
-      currentUser = user;
-      navigateTo('/home');
-    } else {
-      renderLogin(); 
-      const completeProfile = document.getElementById("complete-profile");
-      const loginForm = document.getElementById("login-form");
-
-      if (!completeProfile || !loginForm) return;
-
-      loginForm.style.display = "none";
-      completeProfile.style.display = "block";
-
-      const displayName = user.displayName ? user.displayName.split(" ") : ["",""];
-      completeProfile.innerHTML = `
-        <h2 class="text-xl font-bold">Complete Your Profile</h2>
-	<label for="profile-firstName">First Name</label>
-        <input id="profile-firstName" placeholder="First Name" class="input-field" value="${displayName[0]}">
-
- 	<label for="profile-lastName">Last Name</label>
-        <input id="profile-lastName" placeholder="Last Name" class="input-field" value="${displayName[1]}">
-
-	<label for="profile-email">Email</label>
-        <input id="profile-email" placeholder="Email" class="input-field" value="${user.email}" readonly>
-
- 	<label for="profile-birthday">Birthday</label>
-        <input id="profile-birthday" type="date" class="input-field" placeholder="Birthday">
-
- 	<label for="profile-phone">Phone</label>
-        <input id="profile-phone" placeholder="Phone" class="input-field">
-
-	<label for="profile-school">School</label>
-        <input id="profile-school" placeholder="School" class="input-field">
-
-        <select id="profile-examYear" class="input-field">
-          <option>2026 A/L</option>
-          <option>2027 A/L</option>
-          <option>2028 A/L</option>
-        </select>
-        <button id="save-profile-btn" class="liquid-btn w-full">Save</button>
-      `;
-
-      document.getElementById("save-profile-btn").onclick = async () => {
-        const data = {
-          firstName: document.getElementById("profile-firstName").value.trim(),
-          lastName: document.getElementById("profile-lastName").value.trim(),
-          email: user.email,
-          birthday: document.getElementById("profile-birthday").value,
-          phone: document.getElementById("profile-phone").value.trim(),
-          school: document.getElementById("profile-school").value.trim(),
-          examYear: document.getElementById("profile-examYear").value,
-          createdAt: new Date().toISOString()
-        };
-
-        await setDoc(doc(db, "users", user.uid), data);
-        await updateProfile(user, { displayName: `${data.firstName} ${data.lastName}` });
-
-        alert("Profile saved!");
-        currentUser = user;
         navigateTo('/home');
-      };
-    }
-  } catch (err) {
-    alert(err.message);
-  }
-};
+      } else {
+        // නව පරිශීලකයෙක් නම් Form එකක් පෙන්වන්න
+        renderCompleteProfile(user);
+      }
+    } catch (err) { alert(err.message); }
+  };
 }
 
-async function saveProfile() {
-  const user = auth.currentUser;
-  if (!user) return;
+// Google User ගේ අඩුවන දත්ත ලබාගැනීමට
+function renderCompleteProfile(user) {
+  const loginSide = document.getElementById("login-side");
+  loginSide.innerHTML = `
+    <h2 class="text-2xl font-bold text-white mb-4">Complete Profile</h2>
+    <p class="text-xs text-cyan-400 mb-4">Please provide these details to continue.</p>
+    <div class="space-y-3">
+      <input id="p-school" placeholder="School" class="auth-input">
+      <input id="p-phone" placeholder="Phone" class="auth-input">
+      <input id="p-birthday" type="date" class="auth-input">
+      <select id="p-examYear" class="auth-input bg-slate-900">
+        <option value="2026 A/L">2026 A/L</option>
+        <option value="2027 A/L">2027 A/L</option>
+        <option value="2028 A/L">2028 A/L</option>
+      </select>
+      <button id="save-google-profile" class="auth-btn">Finish & Start</button>
+    </div>
+  `;
 
-  const data = {
-    firstName: document.getElementById("profile-firstName").value.trim(),
-    lastName: document.getElementById("profile-lastName").value.trim(),
-    email: document.getElementById("profile-email").value.trim(),
-    birthday: document.getElementById("profile-birthday").value.trim(),
-    phone: document.getElementById("profile-phone").value.trim(),
-    school: document.getElementById("profile-school").value.trim(),
-    examYear: document.getElementById("profile-examYear").value.trim(),
-    createdAt: new Date().toISOString()
+  document.getElementById("save-google-profile").onclick = async () => {
+    const data = {
+      firstName: user.displayName || "User",
+      lastName: "",
+      email: user.email,
+      school: document.getElementById("p-school").value,
+      phone: document.getElementById("p-phone").value,
+      birthday: document.getElementById("p-birthday").value,
+      examYear: document.getElementById("p-examYear").value,
+      createdAt: new Date().toISOString()
+    };
+    await setDoc(doc(db, "users", user.uid), data);
+    navigateTo('/home');
   };
-
-  await setDoc(doc(db, "users", user.uid), data);
-  await updateProfile(user, { displayName: `${data.firstName} ${data.lastName}` });
-
-  alert("Profile saved!");
-  navigateTo('/home');
 }
 
 // ---------- Forget ----------
