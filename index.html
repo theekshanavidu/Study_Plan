@@ -431,14 +431,15 @@ function renderHeader(){
   if(currentUser){
 	const downloadBtn = createLiquidButton("Download App", () => {
       const githubApkUrl = "https://github.com/theekshanavidu/Study_Plan/raw/main/Study_Plan.apk";
+		window.location.href = githubApkUrl;
+    });
     const homeBtn = createLiquidButton("Home",()=>navigateTo('/home'));
     const profileBtn = createLiquidButton("Profile",()=>navigateTo('/profile'));
     const timetableBtn = createLiquidButton("Time Table", ()=>navigateTo('/timetable'));
 	const timeManageBtn = createLiquidButton("Time Manage", () => {
-		window.location.href = githubApkUrl;
-    });
     window.open("https://theekshanavidu.github.io/EduPlan/", "_blank");
     });
+	headerButtons.appendChild(downloadBtn);
     headerButtons.appendChild(timeManageBtn);
     headerButtons.appendChild(timetableBtn);
     headerButtons.appendChild(homeBtn);
@@ -1407,6 +1408,7 @@ window.saveProfile = saveProfile;
 
 </body>
 </html>
+
 
 
 
