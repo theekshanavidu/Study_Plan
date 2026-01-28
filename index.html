@@ -1145,15 +1145,11 @@ async function loadLessonContents(lessonId){
 async function addContent(lessonId){
   const currentUid = auth.currentUser ? auth.currentUser.uid : null;
   
-  // නිවැරදිව Subject එක හඳුනාගැනීම
-  // උදා: "physics-nilantha_theory_01" නම් මෙයින් "physics-nilantha" ලබාගනී
-  const subject = lessonId.split('_').slice(0, -2).join('_'); 
-  if(!subject) { // ඉහත ක්‍රමය අසාර්ථක වුවහොත් (fallback)
-      subject = lessonId.substring(0, lessonId.indexOf('_theory') !== -1 ? lessonId.indexOf('_theory') : lessonId.indexOf('_revision'));
-  }
+  // lessonId එකෙන් subject එක වෙන් කරගැනීම (උදා: physics-nilantha_theory_01)
+  // මෙහිදී 'physics-nilantha' යන්න තිබේදැයි කෙලින්ම පරීක්ෂා කරමු
+  const isNilanthaMod = NILANTHA_MODERATORS.includes(currentUid) && lessonId.includes('physics-nilantha');
 
-  const isNilanthaMod = NILANTHA_MODERATORS.includes(currentUid) && (subject === 'physics-nilantha' || lessonId.includes('physics-nilantha'));
-
+  // Admin හෝ අදාළ Moderator නොවේ නම් පමණක් අවහිර කරන්න
   if (currentUid !== ADMIN_UID && !isNilanthaMod) {
     alert("ඔබට මෙම විෂයට දත්ත එක් කිරීමට අවසර නැත!");
     return;
@@ -1170,20 +1166,26 @@ async function addContent(lessonId){
   }
   
   try {
+    // දැනට තියෙන අයිතම ගණන බලා පිළිවෙල (Order) තීරණය කිරීම
     const snap = await getDocs(query(collection(db,"lessonContents"), where("lessonId","==",lessonId)));
-    await addDoc(collection(db,"lessonContents"),{ 
-      lessonId, 
-      text, 
-      link, 
+    
+    await addDoc(collection(db,"lessonContents"), { 
+      lessonId: lessonId, 
+      text: text, 
+      link: link, 
       order: Number(snap.size + 1), 
       createdAt: Date.now() 
     });
     
+    // Input fields හිස් කිරීම
     textInput.value = "";
     linkInput.value = "";
+    
+    // ලිස්ට් එක refresh කිරීම
     loadLessonContents(lessonId);
     alert("සාර්ථකව ඇතුළත් කළා!");
   } catch(err) {
+    console.error(err);
     alert("දෝෂයක් සිදුවිය: " + err.message);
   }
 }
@@ -1401,5 +1403,6 @@ window.saveProfile = saveProfile;
 
 </body>
 </html>
+
 
 
