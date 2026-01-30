@@ -1,117 +1,1422 @@
 <!DOCTYPE html>
-<html lang="si">
+<html lang="en" class="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>High Speed Downloading...</title>
-    <style>
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; background-color: #050505; color: #fff; text-align: center; }
-        .main-wrapper { display: flex; justify-content: center; align-items: flex-start; gap: 5px; padding: 5px; }
-        .main-content { flex: 1; max-width: 800px; background: #111; padding: 15px; border-radius: 15px; border: 1px solid #ff000033; }
-        
-        /* Sidebars */
-        .sidebar { width: 160px; display: flex; flex-direction: column; gap: 10px; }
-        @media (max-width: 1150px) { .sidebar { display: none; } }
+<meta charset="UTF-8">
+  <meta name="description" content="This is a study plan website for students. Daily study schedules, tips, and learning guidance.">
+  <meta name="keywords" content="study plan, education, student timetable, learning tips">
+<meta name="author" content="Theekshana Vidu">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Study Tracker</title>
+<link rel="icon" type="image/png" href="https://img.freepik.com/premium-vector/reading-owl-logo-simple-vector-design_609149-1053.jpg?semt=ais_hybrid&w=740&q=80">
+<link rel="manifest" href="manifest.json">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
 
-        .timer-text { font-size: 80px; color: #ff0000; font-weight: bold; text-shadow: 0 0 20px #ff0000; margin: 10px 0; }
-        .ad-row { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
-        
-        /* Neon Red Button */
-        .btn { 
-            display: none; padding: 25px 70px; background: transparent; color: #ff0000; 
-            text-decoration: none; border-radius: 12px; font-weight: bold; font-size: 28px; 
-            border: 4px solid #ff0000; cursor: pointer; text-transform: uppercase;
-            box-shadow: 0 0 20px #ff0000, inset 0 0 10px #ff0000; transition: 0.3s;
-            animation: pulse-neon 1.2s infinite alternate;
-        }
-        .btn:hover { background: #ff0000; color: #000; box-shadow: 0 0 50px #ff0000; }
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-        @keyframes pulse-neon { from { opacity: 0.8; } to { opacity: 1; transform: scale(1.02); } }
-    </style>
+:root {
+  --primary: #6366f1;
+  --secondary: #0ea5e9;
+  --bg-gradient: radial-gradient(circle at top, #1e1b4b, #000000);
+  --card-bg: rgba(30, 41, 59, 0.7);
+  --text-main: #f1f5f9;
+}
+
+.light {
+  --bg-gradient: radial-gradient(circle at top, #f0f9ff, #e2e8f0);
+  --card-bg: rgba(255, 255, 255, 0.8);
+  --text-main: #1e293b;
+}
+
+body {
+  background: var(--bg-gradient);
+  color: var(--text-main);
+  font-family: 'Inter', sans-serif;
+  transition: all 0.4s ease;
+  min-height: 100vh;
+}
+
+/* Glassmorphism containers */
+#app-container > div, .bg-slate-800 {
+  background: var(--card-bg) !important;
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+  border-radius: 1.5rem !important;
+  padding: 1.5rem !important;
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Updated Liquid Button */
+.liquid-btn {
+  position: relative;
+  padding: 0.6rem 1.5rem;
+  color: white !important;
+  overflow: hidden;
+  border: none;
+  border-radius: 0.8rem;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+}
+
+.liquid-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(99, 102, 241, 0.5);
+  filter: brightness(1.1);
+}
+
+.input-field {
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: rgba(15, 23, 42, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  color: inherit;
+  width: 100%;
+  transition: 0.3s;
+  outline: none;
+}
+
+.input-field:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+header {
+  background: rgba(15, 23, 42, 0.2) !important;
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 2rem;
+}
+
+/* --- Full Screen Auth Design --- */
+.auth-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* Header එකේ උස අඩු කර ඉතිරි මුළු ඉඩම ලබා ගනී */
+    min-height: calc(100vh - 100px); 
+    width: 100%;
+    padding: 20px;
+}
+
+.auth-container {
+    display: flex;
+    width: 100%;
+    max-width: 900px; /* පින්තූරයේ පරිදි පළල වැඩි කරන ලදී */
+    min-height: 500px;
+    background: #081b29;
+    border: 2px solid #0ef;
+    box-shadow: 0 0 25px #0ef;
+    border-radius: 15px;
+    overflow: hidden;
+}
+
+.auth-form-side {
+    flex: 1;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background: #081b29;
+    z-index: 2;
+}
+
+.auth-info-side {
+    flex: 1;
+    background: linear-gradient(135deg, rgba(0, 238, 255, 0.15), #081b29);
+    border-left: 2px solid #0ef;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 30px;
+}
+
+/* Mobile Friendly CSS */
+@media (max-width: 768px) {
+    .auth-wrapper {
+        min-height: auto;
+        padding: 50px 20px; /* උඩින් සහ දෙපැත්තෙන් ඉඩ තැබීමට */
+    }
+
+    .auth-container {
+        flex-direction: column;
+        height: auto; 
+        max-height: none; /* උස සීමා නොකිරීමට */
+        overflow-y: visible; /* Scroll නොවී සම්පූර්ණයෙන් පෙන්වීමට */
+    }
+
+    .auth-form-side {
+        width: 100%;
+        padding: 30px 20px;
+    }
+
+    .auth-info-side {
+        order: 2; /* Form එකට පසුව පෙන්වීමට */
+        width: 100%;
+        padding: 40px 20px;
+        display: block; /* සමහර විට mobile වලදී hide කර ඇත්නම් පෙන්වීමට */
+    }
+}
+
+.auth-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid #fff;
+    color: #fff;
+    padding: 12px 5px;
+    margin: 15px 0;
+    outline: none;
+    font-size: 16px;
+    transition: 0.3s;
+}
+
+.auth-input:focus { border-bottom-color: #0ef; }
+
+.auth-btn {
+    width: 100%;
+    height: 48px;
+    background: #0ef;
+    border: none;
+    border-radius: 40px;
+    color: #081b29;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 0 15px #0ef;
+    margin-top: 20px;
+}
+
+.google-auth-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+    margin-top: 20px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    color: white;
+    font-size: 14px;
+}
+//* --- Custom Toggle Switch --- */
+.theme-switch-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 26px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #334155;
+  transition: .4s;
+  border-radius: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.slider:before {
+  position: absolute;
+  content: "🌙"; /* Dark mode icon */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  height: 18px;
+  width: 18px;
+  left: 4px;
+  bottom: 3.5px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: #0ea5e9;
+  box-shadow: 0 0 10px #0ea5e9;
+}
+
+input:checked + .slider:before {
+  transform: translateX(24px);
+  content: "☀️"; /* Light mode icon */
+}
+
+/* Tablet & Desktop specific adjustments */
+@media (min-width: 768px) {
+  #app-container {
+    padding: 1rem;
+  }
+}
+</style>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  onAuthStateChanged,
+  signOut,
+  updateProfile,
+  updateEmail,
+  GoogleAuthProvider,
+  signInWithPopup
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, addDoc, collection, getDocs, getDoc, query, where, updateDoc, deleteDoc, orderBy, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// Firebase Configuration (From your original code)
+const firebaseConfig = {
+    apiKey: "AIzaSyDYhulc8Qz_xGfIeb1g9A6BGO2wwbrz82M",
+    authDomain: "study-9c374.firebaseapp.com",
+    projectId: "study-9c374",
+    storageBucket: "study-9c374.appspot.com",
+    messagingSenderId: "82946998504",
+    appId: "1:82946998504:web:290cd36a2559846891095d"
+};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const googleProvider = new GoogleAuthProvider();
+const NILANTHA_MODERATORS = ["vn9a2rNQgbbYPyHRS2c28XwlMRJ3", "2M8JB3hF4GQdBIwHfzp2grjBVCJ3"];
+const ADMIN_UID = "m1rddMA36WbVunFW3B0BzuqOwyI2";
+
+let currentUser = null;
+const appContainer = document.getElementById('app-container');
+const headerGreeting = document.getElementById('header-greeting');
+const headerButtons = document.getElementById('header-buttons');
+
+// Theme Logic
+window.toggleTheme = () => {
+  const html = document.documentElement;
+  const checkbox = document.getElementById('theme-checkbox');
+  
+  if (html.classList.contains('dark')) {
+    html.classList.replace('dark', 'light');
+    localStorage.setItem('theme', 'light');
+  } else {
+    html.classList.replace('light', 'dark');
+    localStorage.setItem('theme', 'dark');
+  }
+};
+
+// Check saved theme
+function applySavedTheme() {
+  const savedTheme = localStorage.getItem('theme') || 'dark';
+  const checkbox = document.getElementById('theme-checkbox');
+  
+  if (savedTheme === 'light') {
+    document.documentElement.classList.replace('dark', 'light');
+    if(checkbox) checkbox.checked = true; // Light mode නම් switch එක on කරයි
+  } else {
+    document.documentElement.classList.replace('light', 'dark');
+    if(checkbox) checkbox.checked = false;
+  }
+}
+applySavedTheme();
+/// ---------- ROUTER SYSTEM ----------
+function navigateTo(path) {
+  window.location.hash = path;
+}
+
+window.addEventListener('hashchange', router);
+
+async function router() {
+  const path = window.location.hash.slice(1) || '/';
+  renderHeader();
+
+  // Public routes
+  if (path === '/' || path === '/welcome') { renderWelcome(); return; }
+  if (path === '/login') { renderLogin(); return; }
+  if (path === '/register') { renderRegister(); return; }
+
+  // Protected routes check
+  if (!currentUser) {
+    // If not logged in and trying to access protected, go to welcome
+    renderWelcome();
+    return;
+  }
+
+  // Route logic
+  if (path === '/home') { renderHome(); }
+  else if (path === '/profile') { renderProfile(); }
+  else if (path === '/timetable') { renderTimetable(); }
+  else if (path === '/adminpanel') { renderAdmin(); }
+  else if (path === '/recording') { renderSubjects(); }
+  
+  // Dynamic Recording Routes: /recording/subject/type/lesson
+  else if (path.startsWith('/recording/')) {
+    const parts = path.split('/'); 
+    const subject = parts[2]; // chemistry, physics, etc
+    const type = parts[3];    // theory, revision
+    const lesson = parts[4];  // lesson01, 02...
+
+    if (subject && type && lesson) {
+      const day = lesson.replace('lesson', '');
+      openLessonPage(subject, type, day);
+    } else if (subject && type) {
+      renderLessons(subject, type);
+    } else if (subject) {
+      renderType(subject);
+    }
+  }
+}
+
+// ---------- Greeting ----------
+function getGreeting(name){
+  const h = new Date().getHours();
+  let greeting = h < 12 ? "Good Morning" : h < 17 ? "Good Afternoon" : "Good Evening";
+  return name ? `${greeting} ${name}` : greeting;
+}
+function updateGreeting(){
+  const name = currentUser?.displayName;
+  const now = new Date();
+  headerGreeting.textContent = `${getGreeting(name)} | ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
+}
+setInterval(updateGreeting, 1000);
+
+// ---------- Auth Listener ----------
+onAuthStateChanged(auth, u=>{
+  currentUser = u;
+  if(currentUser && currentUser.uid===ADMIN_UID) currentUser.displayName="Admin";
+  
+  // පද්ධතිය ආරම්භයේදීම හෝ welcome hash එක තිබේ නම් කෙලින්ම login/home වෙත යොමු කරයි
+  if(!window.location.hash || window.location.hash === '#/' || window.location.hash === '#/welcome') {
+    navigateTo(currentUser ? '/home' : '/login'); 
+  } else {
+    router();
+  }
+});
+
+// ---------- Header ----------
+function renderHeader(){
+  headerButtons.innerHTML='';
+  if(currentUser){
+	const downloadBtn = createLiquidButton("Download App", () => {
+      const githubApkUrl = "https://github.com/theekshanavidu/Study_Plan/raw/main/Study_Plan.apk";
+		window.location.href = githubApkUrl;
+    });
+    const homeBtn = createLiquidButton("Home",()=>navigateTo('/home'));
+    const profileBtn = createLiquidButton("Profile",()=>navigateTo('/profile'));
+    const timetableBtn = createLiquidButton("Time Table", ()=>navigateTo('/timetable'));
+	const timeManageBtn = createLiquidButton("Time Manage", () => {
+    window.open("https://theekshanavidu.github.io/EduPlan/", "_blank");
+    });
+	headerButtons.appendChild(downloadBtn);
+    headerButtons.appendChild(timeManageBtn);
+    headerButtons.appendChild(timetableBtn);
+    headerButtons.appendChild(homeBtn);
+    headerButtons.appendChild(profileBtn);
+    
+   
+
+    if(currentUser.uid===ADMIN_UID){
+      const adminBtn = createLiquidButton("Admin Panel",()=>navigateTo('/adminpanel'));
+      headerButtons.appendChild(adminBtn);
+    }
+
+    const logoutBtn = createLiquidButton("Logout", async ()=>{
+        await signOut(auth);
+        navigateTo('/login');
+    });
+    headerButtons.appendChild(logoutBtn);
+
+  }else{
+   
+  }
+}
+
+// ---------- Liquid Button Helper ----------
+function createLiquidButton(text, onClick){
+  const btn = document.createElement('button');
+  btn.className = 'liquid-btn';
+  btn.textContent = text;
+  btn.onclick = onClick;
+  return btn;
+}
+
+
+
+// ---------- Register ----------
+function renderRegister(){
+  appContainer.innerHTML = `
+  <div class="auth-wrapper">
+    <div class="auth-container">
+      <div class="auth-form-side">
+        <h2 class="text-3xl font-bold text-white mb-6 uppercase tracking-wider">Sign Up</h2>
+        <form id="register-form" class="flex flex-col gap-2">
+          <input type="text" name="name" placeholder="Full Name" class="auth-input" required>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <input type="text" id="birthday" name="birthday" placeholder="Birthday" onfocus="(this.type='date')" class="auth-input" required>
+            <input type="text" name="school" placeholder="School" class="auth-input" required>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <input type="email" name="email" placeholder="Email" class="auth-input" required>
+            <input type="text" name="phone" placeholder="Phone (07x xxxxxxx)" class="auth-input" required>
+          </div>
+          
+          <input type="password" name="password" placeholder="Password" class="auth-input" required>
+          
+          <button type="submit" class="auth-btn">Create Account</button>
+          <div id="reg-error" class="text-red-400 text-xs mt-2 text-center"></div>
+        </form>
+        <p class="mt-4 text-sm text-center text-white">Already have an account? <a href="#/login" class="text-cyan-400 font-bold underline">Login</a></p>
+      </div>
+      
+      <div class="auth-info-side">
+        <h2 class="text-4xl font-bold text-white mb-4 uppercase">Join Us!</h2>
+        <p class="text-gray-300 text-sm leading-relaxed px-6">
+         Register today and start your educational journey in a new way.
+        </p>
+      </div>
+    </div>
+  </div>`;
+
+  document.getElementById('register-form').onsubmit = async e => {
+    e.preventDefault();
+    const f = e.target;
+    try {
+      const cred = await createUserWithEmailAndPassword(auth, f.email.value, f.password.value);
+      await updateProfile(cred.user, { displayName: f.name.value });
+      await setDoc(doc(db, 'users', cred.user.uid), {
+        firstName: f.name.value,
+        lastName: "",
+        birthday: f.birthday.value,
+        school: f.school.value,
+        phone: f.phone.value,
+        email: f.email.value,
+        createdAt: new Date().toISOString()
+      });
+      navigateTo('/home');
+    } catch(err) { 
+      document.getElementById('reg-error').textContent = err.message; 
+    }
+  };
+}
+
+
+// ---------- Login ----------
+function renderLogin(){
+  appContainer.innerHTML = `
+  <div class="auth-wrapper">
+    <div class="auth-container">
+      <div class="auth-form-side" id="login-side">
+        <h2 class="text-3xl font-bold text-white mb-8">Login</h2>
+        <form id="login-form">
+          <input type="email" name="email" placeholder="Email" class="auth-input" required>
+          <input type="password" name="password" placeholder="Password" class="auth-input" required>
+          <button type="submit" class="auth-btn">Login</button>
+          <div id="login-error" class="text-red-400 text-xs mt-2"></div>
+        </form>
+        
+        <button id="forgot-password-btn" class="text-xs text-indigo-400 hover:underline mt-4 block mx-auto">
+          මුරපදය අමතකද? (Forgot Password?)
+        </button>
+
+        <p class="mt-4 text-sm text-white text-center">Don't have an account? <a href="#/register" class="text-cyan-400 underline">Sign Up</a></p>
+        
+        <button id="google-login" class="google-auth-btn">
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18">
+          Continue with Google
+        </button>
+      </div>
+      <div class="auth-info-side">
+        <h2 class="text-4xl font-bold text-white mb-4 uppercase">Welcome!</h2>
+        <p class="text-gray-300 text-sm leading-relaxed">Join now to manage your studies properly.</p>
+      </div>
+    </div>
+  </div>`;
+
+  // Login Form Submission
+  document.getElementById('login-form').onsubmit = async e=>{
+    e.preventDefault();
+    const f = e.target;
+    try{
+      const cred = await signInWithEmailAndPassword(auth,f.email.value,f.password.value);
+      currentUser = cred.user;       
+      navigateTo('/home');
+    }catch(err){ 
+      document.getElementById('login-error').textContent = err.message; 
+    }
+  };
+
+  // Forgot Password Button Action
+  document.getElementById('forgot-password-btn').onclick = handleForgotPassword;
+
+
+  document.getElementById("google-login").onclick = async () => {
+  try {
+    const result = await signInWithPopup(auth, googleProvider);
+    const user = result.user;
+
+    const ref = doc(db, "users", user.uid);
+    const snap = await getDoc(ref);
+
+    if (snap.exists()) {
+        navigateTo('/home');
+      } else {
+        // නව පරිශීලකයෙක් නම් Form එකක් පෙන්වන්න
+        renderCompleteProfile(user);
+      }
+    } catch (err) { alert(err.message); }
+  };
+}
+
+// Google User ගේ අඩුවන දත්ත ලබාගැනීමට
+function renderCompleteProfile(user) {
+  const loginSide = document.getElementById("login-side");
+  loginSide.innerHTML = `
+    <h2 class="text-2xl font-bold text-white mb-4">Complete Profile</h2>
+    <p class="text-xs text-cyan-400 mb-4">Please provide these details to continue.</p>
+    <div class="space-y-3">
+      <input id="p-school" placeholder="School" class="auth-input">
+      <input id="p-phone" placeholder="Phone" class="auth-input">
+      <input id="p-birthday" type="date" class="auth-input">
+      <select id="p-examYear" class="auth-input bg-slate-900">
+        <option value="2026 A/L">2026 A/L</option>
+        <option value="2027 A/L">2027 A/L</option>
+        <option value="2028 A/L">2028 A/L</option>
+      </select>
+      <button id="save-google-profile" class="auth-btn">Finish & Start</button>
+    </div>
+  `;
+
+  document.getElementById("save-google-profile").onclick = async () => {
+    const data = {
+      firstName: user.displayName || "User",
+      lastName: "",
+      email: user.email,
+      school: document.getElementById("p-school").value,
+      phone: document.getElementById("p-phone").value,
+      birthday: document.getElementById("p-birthday").value,
+      examYear: document.getElementById("p-examYear").value,
+      createdAt: new Date().toISOString()
+    };
+    await setDoc(doc(db, "users", user.uid), data);
+    navigateTo('/home');
+  };
+}
+
+// ---------- Forget ----------
+async function handleForgotPassword() {
+  const email = prompt("මුරපදය අලුත් කිරීමට ඔබ ලියාපදිංචි වූ Email ලිපිනය ඇතුළත් කරන්න:");
+  if (!email) return;
+
+  try {
+    await sendPasswordResetEmail(auth, email);
+    alert("මුරපදය අලුත් කිරීමට අවශ්‍ය උපදෙස් ඔබගේ Email ලිපිනයට එවා ඇත. කරුණාකර Inbox හෝ Spam පරීක්ෂා කරන්න.");
+  } catch (error) {
+    console.error(error);
+    alert("දෝෂයක් සිදුවිය: " + error.message);
+  }
+}
+
+// ---------- Home ----------
+async function renderHome(){
+  appContainer.innerHTML = `
+  <div class="space-y-4 w-full max-w-xl mx-auto">
+    <button id="recording-btn" class="liquid-btn w-full text-xl py-4 mb-4">
+  🎥 Recordings
+</button>
+    <h2 class="text-2xl font-bold">Daily Entry</h2>
+
+    <form id="daily-form" class="space-y-2 flex flex-col gap-2">
+      <input type="date" name="date" value="${new Date().toISOString().slice(0,10)}" class="input-field" required>
+      <input type="number" name="hours" placeholder="Hours studied" min="0" max="24" class="input-field" required>
+      <button class="liquid-btn w-full">Save / Add</button>
+      <div id="daily-msg" class="text-green-400"></div>
+    </form>
+
+    <h3 class="text-xl font-bold mt-4">Update Entry</h3>
+    <form id="update-today-form" class="flex flex-col gap-2">
+      <input type="date" name="updateDate" class="input-field" value="${new Date().toISOString().slice(0,10)}" required>
+      <input type="number" name="updateHours" placeholder="New hours" min="0" max="24" class="input-field">
+      <button class="liquid-btn w-full">Update</button>
+      <div id="update-msg" class="text-green-400"></div>
+    </form>
+
+    <h2 class="text-2xl font-bold mt-4">Weekly Chart</h2>
+    <canvas id="weekly-chart" class="bg-slate-800 rounded p-2"></canvas>
+    <h2 class="text-2xl font-bold mt-4">Monthly Chart</h2>
+    <canvas id="monthly-chart" class="bg-slate-800 rounded p-2"></canvas>
+  </div>`;
+    
+  document.getElementById('daily-form').onsubmit = async e=>{
+    e.preventDefault();
+    const f = e.target;
+    const today = f.date.value;
+    if(Number(f.hours.value) > 24){ alert("Maximum hours per day is 24"); return; }
+
+    const logsSnap = await getDocs(query(collection(db,'studyLogs'), where('userId','==',currentUser.uid), where('date','==',today)));
+    if(logsSnap.docs.length){
+      const docId = logsSnap.docs[0].id;
+      await updateDoc(doc(db,'studyLogs',docId), {hours: Number(f.hours.value)});
+      document.getElementById('daily-msg').textContent = 'Updated!';
+    } else {
+      await addDoc(collection(db,'studyLogs'), {userId: currentUser.uid, date: today, hours: Number(f.hours.value), createdAt:new Date().toISOString()});
+      document.getElementById('daily-msg').textContent = 'Saved!';
+    }
+    renderCharts();
+  };
+document.getElementById("recording-btn").onclick = () => navigateTo('/recording');
+
+
+  // ---------- Update Entry ----------
+  document.getElementById('update-today-form').onsubmit = async e=>{
+    e.preventDefault();
+    const f = e.target;
+    const today = f.updateDate.value; 
+    const newHours = Number(f.updateHours.value);
+    if(newHours > 24){ alert("Maximum hours per day is 24"); return; }
+
+    const logsSnap = await getDocs(query(collection(db,'studyLogs'), where('userId','==',currentUser.uid), where('date','==',today)));
+    if(logsSnap.docs.length){
+      const docId = logsSnap.docs[0].id;
+      await updateDoc(doc(db,'studyLogs',docId), {hours: newHours});
+      document.getElementById('update-msg').textContent = `Entry for ${today} updated!`;
+      f.updateHours.value = '';
+    } else {
+      alert(`No entry for ${today}. Please add it first.`);
+    }
+    renderCharts();
+  };
+
+  renderCharts();
+}
+
+// ---------- Charts ----------
+async function renderCharts(userId = currentUser.uid){
+  const snap = await getDocs(query(collection(db,'studyLogs'), where('userId','==',userId)));
+  const data = snap.docs.map(d=>d.data());
+  const weekly=[], monthly={};
+  const today = new Date();
+
+  for(let i=6;i>=0;i--){
+    const d = new Date();
+    d.setDate(today.getDate()-i);
+    const ds = d.toISOString().slice(0,10);
+    weekly.push(data.filter(x=>x.date===ds).reduce((a,b)=>a+b.hours,0));
+  }
+
+  data.forEach(x=>{
+    const month = x.date.slice(0,7); 
+    monthly[month] = (monthly[month] || 0) + x.hours;
+  });
+
+  const months = Object.keys(monthly).sort((a,b)=>{
+    const [yearA, monthA] = a.split('-').map(Number);
+    const [yearB, monthB] = b.split('-').map(Number);
+    return yearA === yearB ? monthA - monthB : yearA - yearB;
+  });
+  const values = months.map(m => monthly[m]);
+
+  const ctxW = document.getElementById('weekly-chart');
+  if(ctxW){
+    const ctx = ctxW.getContext('2d');
+    window.weeklyChart?.destroy();
+    window.weeklyChart = new Chart(ctx,{
+      type:'line',
+      data:{
+        labels:Array.from({length:7},(_,i)=>{const d=new Date(); d.setDate(today.getDate()-6+i); return d.toISOString().slice(5,10);}),
+        datasets:[{label:'Hours', data:weekly, borderColor:'#8b5cf6', backgroundColor:'rgba(139,92,246,0.3)', fill:true}]
+      },
+      options: {
+  responsive: true,
+  plugins: { legend: { labels: { color: '#fff' } } },
+  scales: { x: { ticks: { color: '#fff' } }, y: { ticks: { color: '#fff' }, beginAtZero: true } }
+}
+    });
+  }
+
+
+  const ctxM = document.getElementById('monthly-chart');
+  if(ctxM){
+    const ctx = ctxM.getContext('2d');
+    window.monthlyChart?.destroy();
+    const monthLabels = months.map(m => {
+        const [year, month] = m.split("-");
+        return new Date(year, month - 1).toLocaleString("en", { month: "short", year: "numeric" });
+    });
+
+    window.monthlyChart = new Chart(ctx,{
+      type:'line',
+      data:{
+        labels:monthLabels,
+        datasets:[{label:'Hours', data:values, borderColor:'#22d3ee', backgroundColor:'rgba(34,211,238,0.3)', fill:true}]
+      },
+      options: {
+  responsive: true,
+  plugins: { legend: { labels: { color: '#fff' } } },
+  scales: { x: { ticks: { color: '#fff' } }, y: { ticks: { color: '#fff' }, beginAtZero: true } }
+}
+    });
+  }
+}
+
+
+
+// ---------- Profile ----------
+async function renderProfile(){
+  const snap = await getDoc(doc(db,'users',currentUser.uid));
+  if(!snap.exists()){ alert('Profile not found'); return; }
+  const u = snap.data();
+  appContainer.innerHTML = `
+  <div class="bg-slate-800 p-6 rounded-xl max-w-md mx-auto space-y-4">
+    <h2 class="text-2xl font-bold">${u.firstName} ${u.lastName}</h2>
+    <form id="profile-form" class="flex flex-col gap-2">
+      <label>First Name</label>
+      <input type="text" name="firstName" class="input-field" value="${u.firstName}" required>
+      <label>Last Name</label>
+      <input type="text" name="lastName" class="input-field" value="${u.lastName}" required>
+      <label>Birthday</label>
+      <input type="date" name="birthday" class="input-field" value="${u.birthday}" required>
+      <label>School</label>
+      <input type="text" name="school" class="input-field" value="${u.school}" required>
+      <label>Exam Year</label>
+      <select name="examYear" class="input-field" required>
+        <option ${u.examYear==="2026 A/L"?"selected":""}>2026 A/L</option>
+        <option ${u.examYear==="2027 A/L"?"selected":""}>2027 A/L</option>
+        <option ${u.examYear==="2028 A/L"?"selected":""}>2028 A/L</option>
+      </select>
+      <label>Phone</label>
+      <input type="text" name="phone" class="input-field" value="${u.phone}" required>
+      <label>Email</label>
+      <input type="email" name="email" class="input-field" value="${u.email}" required>
+      <button type="submit" class="liquid-btn w-full">Update Profile</button>
+      <div id="profile-msg" class="text-green-400"></div>
+    </form>
+  </div>`;
+  document.getElementById('profile-form').onsubmit = async e=>{
+    e.preventDefault();
+    const f = e.target;
+    const updatedData = {
+      firstName:f.firstName.value,
+      lastName:f.lastName.value,
+      birthday:f.birthday.value,
+      school:f.school.value,
+      examYear:f.examYear.value,
+      phone:f.phone.value
+    };
+    await updateDoc(doc(db,'users',currentUser.uid), updatedData);
+    if(f.email.value !== currentUser.email){
+      try{
+        await updateEmail(currentUser, f.email.value);
+        await sendEmailVerification(currentUser);
+        alert('Email updated. Verification email sent.');
+      }catch(err){ alert(err.message); }
+    }
+    document.getElementById('profile-msg').textContent = 'Profile updated!';
+  };
+}
+
+// ---------- Time Table ----------
+async function renderTimetable() {
+  if (!currentUser) { alert("Please login to access Time Table."); return; }
+
+  const ttRef = doc(db, "timetable", currentUser.uid);
+  const ttSnap = await getDoc(ttRef);
+  const savedData = ttSnap.exists() ? ttSnap.data() : {};
+
+  const days = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+  const hours = Array.from({length:24}, (_,i)=>{
+    const fmt = (hr)=> { const suffix = hr < 12 ? "am" : "pm"; const h = hr%12||12; return `${h}${suffix}`; };
+    return `${fmt(i)} - ${fmt(i+1)}`;
+  });
+
+  appContainer.innerHTML = `
+    <div class="bg-slate-800 p-4 rounded-xl w-full flex flex-col gap-4">
+      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+        <h2 class="text-2xl font-bold">Weekly Time Table</h2>
+        <div class="flex flex-wrap gap-2">
+          <button id="tt-fill-free" class="liquid-btn">Fill "Free"</button>
+          <button id="tt-clear" class="liquid-btn">Clear All</button>
+          <button id="save-timetable" class="liquid-btn">Save Time Table</button>
+          <button id="export-pdf" class="liquid-btn">Export PDF</button>
+        </div>
+      </div>
+      <p class="text-sm text-slate-400 md:hidden">👉 Swipe left / right to see full timetable</p>
+      <div class="overflow-x-auto w-full">
+        <table id="tt-table" class="border border-slate-600 text-sm table-auto min-w-max">
+          <thead>
+            <tr>
+              <th class="border p-3 text-center min-w-[110px]">Hour</th>
+              ${days.map(d=>`<th class="border p-3 text-center whitespace-nowrap">${d}</th>`).join("")}
+            </tr>
+          </thead>
+          <tbody>
+            ${hours.map((h, hourIndex)=>{
+              return `<tr>
+                <td class="border p-3 text-center whitespace-nowrap font-semibold">${h}</td>
+                ${days.map((day, dayIndex)=>{
+                  const cellId = `tt_${dayIndex}_${hourIndex}`;
+                  const val = (savedData && savedData[cellId]) ? savedData[cellId] : "";
+                  return `<td class="border p-1">
+                  <input id="${cellId}" class="bg-slate-900 p-2 rounded text-center min-w-[130px] placeholder-slate-500 italic" placeholder="${h}" value="${val}">
+                  </td>`;
+                }).join("")}
+              </tr>`;
+            }).join("")}
+          </tbody>
+        </table>
+      </div>
+      <div id="tt-msg" class="text-green-400 mt-2"></div>
+    </div>
+    <div class="hidden md:block mt-6">
+      <h2 class="text-2xl font-bold">Weekly Chart</h2>
+      <canvas id="weekly-chart" class="bg-slate-800 rounded p-2 w-full" height="200"></canvas>
+      <h2 class="text-2xl font-bold mt-6">Monthly Chart</h2>
+      <canvas id="monthly-chart" class="bg-slate-800 rounded p-2 w-full" height="200"></canvas>
+    </div>
+  `;
+
+  document.getElementById("tt-fill-free").onclick = ()=> {
+    days.forEach((_,d)=> hours.forEach((_,h)=>{
+      const el = document.getElementById(`tt_${d}_${h}`);
+      if(el && el.value.trim()==="") el.value="Free";
+    }));
+  };
+
+  document.getElementById("tt-clear").onclick = ()=> {
+    if(!confirm("Clear all timetable entries?")) return;
+    days.forEach((_,d)=> hours.forEach((_,h)=>{
+      const el = document.getElementById(`tt_${d}_${h}`);
+      if(el) el.value="";
+    }));
+  };
+
+  document.getElementById("save-timetable").onclick = async ()=>{
+    const saveObj = {};
+    days.forEach((_,d)=> hours.forEach((_,h)=>{
+      const el = document.getElementById(`tt_${d}_${h}`);
+      if(el && el.value.trim()!=="") saveObj[`tt_${d}_${h}`] = el.value.trim();
+    }));
+    try{
+      await setDoc(ttRef, saveObj);
+      document.getElementById("tt-msg").textContent = "Time Table saved successfully!";
+    }catch(err){ document.getElementById("tt-msg").textContent = "Save failed: " + err.message; }
+    renderCharts();
+  };
+
+  renderCharts();
+
+  document.getElementById("export-pdf").onclick = () => {
+    const pdf = new jspdf.jsPDF('p', 'pt', 'a4');
+    const tableData = [];
+    hours.forEach((h, hourIndex) => {
+        const row = [h];
+        days.forEach((_, dayIndex) => {
+            const val = document.getElementById(`tt_${dayIndex}_${hourIndex}`).value.trim();
+            row.push(val || "");
+        });
+        tableData.push(row);
+    });
+    pdf.autoTable({
+        head: [['Hour', ...days]],
+        body: tableData,
+        theme: 'grid',
+        styles: { fontSize: 10, cellPadding: 4 },
+        headStyles: { fillColor: [30, 41, 59], textColor: 255 },
+    });
+    pdf.save(`timetable_${currentUser.uid}.pdf`);
+  };
+}
+
+function renderSubjects(){
+  appContainer.innerHTML = `
+    <h2 class="text-2xl font-bold mb-6">Select Subject</h2>
+    <div class="flex flex-col gap-4">
+      <button id="btn-maths" class="flex items-center gap-4 bg-slate-800 p-4 rounded-xl hover:bg-slate-700">
+        <img src="https://api.combinedmaths.lk/files-public/profiles/281124/1862199793225306112.jpg" class="w-24 h-24 rounded-xl object-cover">
+        <span class="text-xl font-bold">Combine Maths - Ruwan Darshana</span>
+      </button>
+      <button id="btn-physics" class="flex items-center gap-4 bg-slate-800 p-4 rounded-xl hover:bg-slate-700">
+        <img src="https://static.indeepa.lk/lecturer/7/en/652248466c448.jpg" class="w-24 h-24 rounded-xl object-cover">
+        <span class="text-xl font-bold">Physics - Anuradha Perera</span>
+      </button>
+      <button id="btn-chemistry" class="flex items-center gap-4 bg-slate-800 p-4 rounded-xl hover:bg-slate-700">
+        <img src="https://static.indeepa.lk/lecturer/6/en/6522475ddf2bf.jpg" class="w-24 h-24 rounded-xl object-cover">
+        <span class="text-xl font-bold">Chemistry - Amila Dasanayake</span>
+      </button>
+            <button id="btn-physics-nilantha" class="flex items-center gap-4 bg-slate-800 p-4 rounded-xl hover:bg-slate-700">
+        <img src="https://susipvan.lk/img/teachers/2/Nilantha-Jayasooriya.jpg" class="w-24 h-24 rounded-xl object-cover">
+         <span class="text-xl font-bold ">Physics - Nilantha Jayasooriya</span>
+      </button>
+	
+    </div>
+  `;
+  document.getElementById("btn-maths").onclick = () => navigateTo('/recording/maths');
+  document.getElementById("btn-physics").onclick = () => navigateTo('/recording/physics');
+  document.getElementById("btn-chemistry").onclick = () => navigateTo('/recording/chemistry');
+    document.getElementById("btn-physics-nilantha").onclick = () => navigateTo('/recording/physics-nilantha');
+}
+
+function renderType(subject){
+  appContainer.innerHTML = `
+    <h2 class="text-2xl font-bold mb-6">${subject.toUpperCase()}</h2>
+    <div class="flex gap-6">
+      <button class="liquid-btn text-xl px-8 py-4" id="btn-theory">Theory</button>
+      <button class="liquid-btn text-xl px-8 py-4" id="btn-revision">Revision</button>
+            <button class="liquid-btn text-xl px-8 py-4 bg-red-600" id="btn-paper">Paper</button>
+    </div>
+  `;
+  document.getElementById("btn-theory").onclick = ()=> navigateTo(`/recording/${subject}/theory`);
+  document.getElementById("btn-revision").onclick = ()=> navigateTo(`/recording/${subject}/revision`);
+    document.getElementById("btn-paper").onclick = ()=> navigateTo(`/recording/${subject}/paper`);
+}
+
+
+async function renderLessons(subject, type){
+  appContainer.innerHTML = `
+    <h2 class="text-2xl font-bold mb-4">${subject.toUpperCase()} - ${type.toUpperCase()}</h2>
+    <div id="lessons-list" class="flex flex-col gap-3"></div>
+  `;
+  const list = document.getElementById("lessons-list");
+  let lessonsData = {};
+  try {
+    const snap = await getDocs(query(collection(db,"lessons"),where("subject","==",subject),where("type","==",type)));
+    snap.forEach(doc=>{ lessonsData[doc.data().day] = doc.data().title; });
+  } catch(err){ console.warn(err); }
+
+  const currentUid = auth.currentUser ? auth.currentUser.uid : null;
+  const isNilanthaMod = NILANTHA_MODERATORS.includes(currentUid) && subject === 'physics-nilantha';
+
+  for(let i=1;i<=20;i++){
+    const day = String(i).padStart(2,"0");
+    const title = lessonsData[day] || `Day ${day} - Lesson Title`;
+    const row = document.createElement("div");
+    row.className = "flex gap-2 items-center";
+    const lessonBtn = document.createElement("button");
+    lessonBtn.className = "liquid-btn flex-1";
+    lessonBtn.textContent = title;
+    lessonBtn.onclick = ()=> navigateTo(`/recording/${subject}/${type}/lesson${day}`);
+    row.appendChild(lessonBtn);
+
+    // Moderator ට දින නම වෙනස් කිරීමට පමණක් අවසරය දීම
+    if(currentUid === ADMIN_UID || isNilanthaMod){
+      const editBtn = document.createElement("button");
+      editBtn.className = "liquid-btn bg-yellow-500";
+      editBtn.textContent = "✏️";
+      editBtn.onclick = ()=> renameLesson(i, subject, type);
+      row.appendChild(editBtn);
+    }
+    list.appendChild(row);
+  }
+}
+
+async function renameLesson(i, subject, type){
+  const currentUid = auth.currentUser ? auth.currentUser.uid : null;
+  // Moderator කෙනෙක්ද සහ ඔහු Nilantha සර්ගේ විෂයද බලනවා
+  const isNilanthaMod = NILANTHA_MODERATORS.includes(currentUid) && subject === 'physics-nilantha';
+
+  // ප්‍රධාන Admin හෝ අදාළ Moderator නොවේ නම් ක්‍රියාව නවත්වනවා
+  if (currentUid !== ADMIN_UID && !isNilanthaMod) {
+    alert("ඔබට මෙම විෂයෙහි දත්ත වෙනස් කිරීමට අවසර නැත!");
+    return;
+  }
+
+  const day = String(i).padStart(2, "0");
+  const newName = prompt("New lesson name:");
+  if(!newName) return;
+
+  try {
+    // Firestore එකේ දත්ත සේව් කිරීම
+    await setDoc(doc(db, "lessons", `${subject}_${type}_${day}`), { 
+      title: newName, 
+      subject, 
+      type, 
+      day,
+      updatedAt: Date.now() 
+    });
+    
+    // පිටුව refresh කිරීම
+    renderLessons(subject, type);
+  } catch(err) {
+    alert("Error: " + err.message);
+  }
+}
+
+async function openLessonPage(subject, type, day){
+  const lessonId = `${subject}_${type}_${day}`;
+  const currentUid = auth.currentUser ? auth.currentUser.uid : null;
+  
+  // Co-admin කෙනෙක්දැයි පරීක්ෂා කිරීම (subject එක පරාමිතියක් ලෙස ලැබෙන නිසා පහසුයි)
+  const isNilanthaMod = NILANTHA_MODERATORS.includes(currentUid) && subject === 'physics-nilantha';
+  
+  appContainer.innerHTML = `
+    <h2 class="text-2xl font-bold mb-4">Lesson ${day}</h2>
+    <div id="content-list" class="flex flex-col gap-3 mb-6"></div>
+    ${(currentUid === ADMIN_UID || isNilanthaMod) ? `
+      <div class="flex gap-2">
+        <input id="content-text" placeholder="Text (e.g. Tute 01)" class="border p-2 flex-1 text-black rounded">
+        <input id="content-link" placeholder="Link (Drive/YT)" class="border p-2 flex-1 text-black rounded">
+        <button id="add-content-btn" class="liquid-btn">Add</button>
+      </div>
+    ` : ``}
+  `;
+  loadLessonContents(lessonId); 
+  
+  if(currentUid === ADMIN_UID || isNilanthaMod){
+    document.getElementById("add-content-btn").onclick = () => addContent(lessonId);
+  }
+}
+
+async function loadLessonContents(lessonId){
+  const list = document.getElementById("content-list");
+  list.innerHTML = "";
+  const snap = await getDocs(query(collection(db,"lessonContents"),where("lessonId","==",lessonId),orderBy("order","asc")));
+  
+  snap.forEach(docSnap=>{
+    const d = docSnap.data();
+    const id = docSnap.id;
+    const div = document.createElement("div");
+    div.className = "border p-3 flex justify-between items-center mb-2 bg-slate-800 rounded-lg";
+    div.innerHTML = `<a href="${d.link}" target="_blank" class="text-blue-400 hover:underline font-medium">${d.text}</a>`;
+    
+    if(currentUser?.uid === ADMIN_UID){
+      const bc = document.createElement("div"); 
+      bc.className = "flex gap-2 flex-wrap";
+
+            // Edit Button
+          const editBtn = document.createElement("button");
+           editBtn.innerHTML = "✏️";
+          editBtn.className = "hover:scale-110 transition-transform";
+          editBtn.onclick = () => editContent(id, d.text, d.link, d.lessonId);
+      
+      // Up Button
+      const upBtn = document.createElement("button");
+      upBtn.innerHTML = "⬆️";
+      upBtn.onclick = () => moveContent(id, -1);
+      
+      // Down Button
+      const downBtn = document.createElement("button");
+      downBtn.innerHTML = "⬇️";
+      downBtn.onclick = () => moveContent(id, 1);
+      
+      // Delete Button
+      const delBtn = document.createElement("button");
+      delBtn.innerHTML = "🗑️";
+      delBtn.onclick = () => deleteContent(id);
+ 
+      bc.appendChild(editBtn);
+      bc.appendChild(upBtn);
+      bc.appendChild(downBtn);
+      bc.appendChild(delBtn);
+      div.appendChild(bc);
+    }
+    list.appendChild(div);
+  });
+}
+
+// 1. Content එකතු කිරීම
+async function addContent(lessonId){
+  const currentUid = auth.currentUser ? auth.currentUser.uid : null;
+  
+  // lessonId එකෙන් subject එක වෙන් කරගැනීම (උදා: physics-nilantha_theory_01)
+  // මෙහිදී 'physics-nilantha' යන්න තිබේදැයි කෙලින්ම පරීක්ෂා කරමු
+  const isNilanthaMod = NILANTHA_MODERATORS.includes(currentUid) && lessonId.includes('physics-nilantha');
+
+  // Admin හෝ අදාළ Moderator නොවේ නම් පමණක් අවහිර කරන්න
+  if (currentUid !== ADMIN_UID && !isNilanthaMod) {
+    alert("ඔබට මෙම විෂයට දත්ත එක් කිරීමට අවසර නැත!");
+    return;
+  }
+
+  const textInput = document.getElementById("content-text");
+  const linkInput = document.getElementById("content-link");
+  const text = textInput.value.trim();
+  const link = linkInput.value.trim();
+
+  if(!text || !link) {
+    alert("කරුණාකර නම සහ ලින්ක් එක ඇතුළත් කරන්න.");
+    return;
+  }
+  
+  try {
+    // දැනට තියෙන අයිතම ගණන බලා පිළිවෙල (Order) තීරණය කිරීම
+    const snap = await getDocs(query(collection(db,"lessonContents"), where("lessonId","==",lessonId)));
+    
+    await addDoc(collection(db,"lessonContents"), { 
+      lessonId: lessonId, 
+      text: text, 
+      link: link, 
+      order: Number(snap.size + 1), 
+      createdAt: Date.now() 
+    });
+    
+    // Input fields හිස් කිරීම
+    textInput.value = "";
+    linkInput.value = "";
+    
+    // ලිස්ට් එක refresh කිරීම
+    loadLessonContents(lessonId);
+    alert("සාර්ථකව ඇතුළත් කළා!");
+  } catch(err) {
+    console.error(err);
+    alert("දෝෂයක් සිදුවිය: " + err.message);
+  }
+}
+// 2. Content එක Edit කිරීම (Text සහ Link දෙකම)
+async function editContent(id, oldText, oldLink, lessonId) {
+    const newText = prompt("අලුත් නම:", oldText);
+    if (newText === null || newText.trim() === "") return;
+
+    const newLink = prompt("අලුත් ලින්ක් එක:", oldLink);
+    if (newLink === null || newLink.trim() === "") return;
+
+    try {
+        await updateDoc(doc(db, "lessonContents", id), {
+            text: newText.trim(),
+            link: newLink.trim()
+        });
+        loadLessonContents(lessonId);
+    } catch (err) {
+        alert("Error: " + err.message);
+    }
+}
+
+// 3. Order එක මාරු කිරීම (⬆️⬇️)
+async function moveContent(id, dir) {
+  try {
+    const ref = doc(db, "lessonContents", id);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return;
+    const lessonId = snap.data().lessonId;
+
+    // Index ගැටලුව මගහැරීමට සරල Query එකක් භාවිතා කිරීම
+    const q = query(collection(db, "lessonContents"), where("lessonId", "==", lessonId));
+    const querySnapshot = await getDocs(q);
+    
+    let items = [];
+    querySnapshot.forEach(doc => {
+      items.push({ id: doc.id, ...doc.data() });
+    });
+
+    // Order එක අනුව පිළිවෙලට සකස් කිරීම
+    items.sort((a, b) => Number(a.order) - Number(b.order));
+
+    const currentIndex = items.findIndex(item => item.id === id);
+    const targetIndex = currentIndex + dir;
+
+    if (targetIndex >= 0 && targetIndex < items.length) {
+      const currentItem = items[currentIndex];
+      const targetItem = items[targetIndex];
+
+      const batch = writeBatch(db);
+      
+      // Order අගයන් දෙක මාරු කිරීම
+      batch.update(doc(db, "lessonContents", currentItem.id), { order: Number(targetItem.order) });
+      batch.update(doc(db, "lessonContents", targetItem.id), { order: Number(currentItem.order) });
+
+      await batch.commit();
+      loadLessonContents(lessonId); // Refresh list
+    }
+  } catch (error) {
+    console.error("Error moving content:", error);
+    alert("පිළිවෙල මාරු කිරීමේදී දෝෂයක් විය.");
+  }
+}
+
+
+async function deleteContent(id){
+  if(!confirm("මෙම කොටස මකා දැමීමට අවශ්‍යද?")) return;
+  const snap = await getDoc(doc(db,"lessonContents",id));
+  const lessonId = snap.data().lessonId;
+  await deleteDoc(doc(db,"lessonContents",id));
+  loadLessonContents(lessonId); // සම්පූර්ණ page එක reload නොවී ලිස්ට් එක පමණක් refresh කරයි
+}
+
+
+
+// ---------- Admin Panel ----------
+async function renderAdmin() {
+  appContainer.innerHTML = `<h2 class="text-2xl font-bold mb-4">Admin Panel</h2><input id="admin-search" placeholder="Search..." class="input-field mb-4 w-full"><div id="admin-users" class="space-y-2"></div><div id="admin-user-details" class="mt-6"></div>`;
+  const usersSnap = await getDocs(collection(db,'users'));
+  let users = usersSnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+  const usersContainer = document.getElementById('admin-users');
+  const displayUsers = (list) => {
+    usersContainer.innerHTML = '';
+    list.forEach(u => {
+      const div = document.createElement('div');
+      div.className = 'bg-slate-800 p-3 rounded flex justify-between items-center';
+      div.innerHTML = `<div><strong>${u.firstName} ${u.lastName}</strong> (${u.email})</div><div class="flex gap-2"><button onclick="renderAdminUserDetails('${u.id}')" class="liquid-btn">View</button><button onclick="deleteAdminUser('${u.id}','${u.firstName}')" class="liquid-btn">Delete</button></div>`;
+      usersContainer.appendChild(div);
+    });
+  };
+  displayUsers(users);
+  document.getElementById('admin-search').oninput = e => {
+    const term = e.target.value.toLowerCase();
+    displayUsers(users.filter(u => (u.firstName + ' ' + u.lastName).toLowerCase().includes(term) || u.email.toLowerCase().includes(term)));
+  };
+}
+
+async function renderAdminUserDetails(uid) {
+  const detailsContainer = document.getElementById('admin-user-details');
+  
+  // User ගේ දත්ත ලබා ගැනීම
+  const userSnap = await getDoc(doc(db, 'users', uid));
+  if (!userSnap.exists()) return;
+  const u = userSnap.data();
+
+  // Admin Panel එකේ details පෙන්වන HTML එක
+  detailsContainer.innerHTML = `
+    <div class="bg-slate-800 p-6 rounded-xl space-y-4 mt-6 border border-indigo-500">
+      <h3 class="text-2xl font-bold text-indigo-400">${u.firstName} ${u.lastName} ගේ විස්තර</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+        <p><strong>Email:</strong> ${u.email}</p>
+        <p><strong>School:</strong> ${u.school}</p>
+        <p><strong>Phone:</strong> ${u.phone}</p>
+        <p><strong>Exam Year:</strong> ${u.examYear}</p>
+      </div>
+      
+      <div class="space-y-6 mt-4">
+        <div>
+          <h4 class="text-lg font-semibold mb-2 text-white">Weekly Study Progress</h4>
+          <canvas id="admin-weekly-chart" class="bg-slate-900 rounded p-2"></canvas>
+        </div>
+        <div>
+          <h4 class="text-lg font-semibold mb-2 text-white">Monthly Study Progress</h4>
+          <canvas id="admin-monthly-chart" class="bg-slate-900 rounded p-2"></canvas>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Charts පෙන්වීම සඳහා දත්ත ලබා ගැනීම
+  const snap = await getDocs(query(collection(db, 'studyLogs'), where('userId', '==', uid)));
+  const data = snap.docs.map(d => d.data());
+  const weekly = [], monthly = {};
+  const today = new Date();
+
+  // සතියේ දත්ත සකස් කිරීම
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(today.getDate() - i);
+    const ds = d.toISOString().slice(0, 10);
+    weekly.push(data.filter(x => x.date === ds).reduce((a, b) => a + b.hours, 0));
+  }
+
+  // මාසික දත්ත සකස් කිරීම
+  data.forEach(x => {
+    const month = x.date.slice(0, 7);
+    monthly[month] = (monthly[month] || 0) + x.hours;
+  });
+
+  const months = Object.keys(monthly).sort();
+  const monthValues = months.map(m => monthly[m]);
+
+  // Weekly Chart එක ඇඳීම
+  const ctxW = document.getElementById('admin-weekly-chart').getContext('2d');
+  new Chart(ctxW, {
+    type: 'line',
+    data: {
+      labels: Array.from({ length: 7 }, (_, i) => { 
+        const d = new Date(); d.setDate(today.getDate() - 6 + i); 
+        return d.toISOString().slice(5, 10); 
+      }),
+      datasets: [{ label: 'Hours', data: weekly, borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.3)', fill: true }]
+    },
+    options: { plugins: { legend: { labels: { color: '#fff' } } }, scales: { x: { ticks: { color: '#fff' } }, y: { ticks: { color: '#fff' }, beginAtZero: true } } }
+  });
+
+  // Monthly Chart එක ඇඳීම
+  const ctxM = document.getElementById('admin-monthly-chart').getContext('2d');
+  new Chart(ctxM, {
+    type: 'bar',
+    data: {
+      labels: months,
+      datasets: [{ label: 'Monthly Hours', data: monthValues, backgroundColor: '#22d3ee' }]
+    },
+    options: { plugins: { legend: { labels: { color: '#fff' } } }, scales: { x: { ticks: { color: '#fff' } }, y: { ticks: { color: '#fff' }, beginAtZero: true } } }
+  });
+}
+
+async function deleteAdminUser(uid,name){
+  if(confirm(`Delete ${name}?`)){ await deleteDoc(doc(db,'users',uid)); renderAdmin(); }
+}
+
+
+window.renderAdminUserDetails = renderAdminUserDetails;
+window.deleteAdminUser = deleteAdminUser;
+window.editContent = editContent;
+window.moveContent = moveContent;
+window.deleteContent = deleteContent;;
+window.saveProfile = saveProfile;
+</script>
 </head>
-<body>
 
-    <div class="ad-row">
-        <script type="text/javascript">atOptions = { 'key' : '629afdc60f664ca8c5e67d97f540736f', 'format' : 'iframe', 'height' : 90, 'width' : 728, 'params' : {} };</script>
-        <script src="https://www.highperformanceformat.com/629afdc60f664ca8c5e67d97f540736f/invoke.js"></script>
+<body class="flex flex-col items-center justify-start min-h-screen">
+<header class="w-full p-4 flex justify-between items-center flex-wrap gap-4">
+  <div class="flex items-center gap-4">
+    <h1 class="text-2xl font-bold cursor-pointer bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-cyan-400" onclick="window.location.hash='/home'">StudyTracker</h1>
+    
+    <div class="theme-switch-wrapper">
+      <label class="switch">
+        <input type="checkbox" id="theme-checkbox" onclick="toggleTheme()">
+        <span class="slider"></span>
+      </label>
     </div>
+  </div>
+  <div id="header-greeting" class="text-sm font-medium opacity-80"></div>
+  <div id="header-buttons" class="flex gap-2 flex-wrap"></div>
+</header>
 
-    <div class="main-wrapper">
-        
-        <div class="sidebar">
-            <script type="text/javascript">atOptions = { 'key' : '13f9263225d9c4c4d3995f79cb426571', 'format' : 'iframe', 'height' : 600, 'width' : 160, 'params' : {} };</script>
-            <script src="https://www.highperformanceformat.com/13f9263225d9c4c4d3995f79cb426571/invoke.js"></script>
-            <script type="text/javascript">atOptions = { 'key' : '4fc469aabd83b5a300b03cb5766cff1f', 'format' : 'iframe', 'height' : 300, 'width' : 160, 'params' : {} };</script>
-            <script src="https://www.highperformanceformat.com/4fc469aabd83b5a300b03cb5766cff1f/invoke.js"></script>
-            <script type="text/javascript">atOptions = { 'key' : '4fc469aabd83b5a300b03cb5766cff1f', 'format' : 'iframe', 'height' : 300, 'width' : 160, 'params' : {} };</script>
-            <script src="https://www.highperformanceformat.com/4fc469aabd83b5a300b03cb5766cff1f/invoke.js"></script>
-        </div>
+<main class="flex-1 w-full max-w-4xl mt-2 px-4" id="app-container">
+  </main>
 
-        <div class="main-content">
-            <h2 style="color: #ff4d4d; letter-spacing: 1px;">ගොනුව සූදානම් වෙමින් පවතී...</h2>
-
-            <div class="ad-row">
-                <script type="text/javascript">atOptions = { 'key' : '1b344390970a850fca49ca94b4b4ff8b', 'format' : 'iframe', 'height' : 250, 'width' : 300, 'params' : {} };</script>
-                <script src="https://www.highperformanceformat.com/1b344390970a850fca49ca94b4b4ff8b/invoke.js"></script>
-                <script type="text/javascript">atOptions = { 'key' : '1b344390970a850fca49ca94b4b4ff8b', 'format' : 'iframe', 'height' : 250, 'width' : 300, 'params' : {} };</script>
-                <script src="https://www.highperformanceformat.com/1b344390970a850fca49ca94b4b4ff8b/invoke.js"></script>
-            </div>
-
-            <div class="timer-text" id="seconds">10</div>
-
-            <div class="ad-row">
-                <script type="text/javascript">atOptions = { 'key' : 'c1fbe57adeea1ade3f7f838a985613f1', 'format' : 'iframe', 'height' : 60, 'width' : 468, 'params' : {} };</script>
-                <script src="https://www.highperformanceformat.com/c1fbe57adeea1ade3f7f838a985613f1/invoke.js"></script>
-                <script type="text/javascript">atOptions = { 'key' : 'c1fbe57adeea1ade3f7f838a985613f1', 'format' : 'iframe', 'height' : 60, 'width' : 468, 'params' : {} };</script>
-                <script src="https://www.highperformanceformat.com/c1fbe57adeea1ade3f7f838a985613f1/invoke.js"></script>
-            </div>
-
-            <a href="#" id="download-btn" class="btn">Download Now</a>
-
-            <div class="ad-row">
-                <script type="text/javascript">atOptions = { 'key' : '1b344390970a850fca49ca94b4b4ff8b', 'format' : 'iframe', 'height' : 250, 'width' : 300, 'params' : {} };</script>
-                <script src="https://www.highperformanceformat.com/1b344390970a850fca49ca94b4b4ff8b/invoke.js"></script>
-                <script type="text/javascript">atOptions = { 'key' : '1b344390970a850fca49ca94b4b4ff8b', 'format' : 'iframe', 'height' : 250, 'width' : 300, 'params' : {} };</script>
-                <script src="https://www.highperformanceformat.com/1b344390970a850fca49ca94b4b4ff8b/invoke.js"></script>
-            </div>
-        </div>
-
-        <div class="sidebar">
-            <script type="text/javascript">atOptions = { 'key' : '13f9263225d9c4c4d3995f79cb426571', 'format' : 'iframe', 'height' : 600, 'width' : 160, 'params' : {} };</script>
-            <script src="https://www.highperformanceformat.com/13f9263225d9c4c4d3995f79cb426571/invoke.js"></script>
-            <script type="text/javascript">atOptions = { 'key' : '4fc469aabd83b5a300b03cb5766cff1f', 'format' : 'iframe', 'height' : 300, 'width' : 160, 'params' : {} };</script>
-            <script src="https://www.highperformanceformat.com/4fc469aabd83b5a300b03cb5766cff1f/invoke.js"></script>
-            <script type="text/javascript">atOptions = { 'key' : '13f9263225d9c4c4d3995f79cb426571', 'format' : 'iframe', 'height' : 600, 'width' : 160, 'params' : {} };</script>
-            <script src="https://www.highperformanceformat.com/13f9263225d9c4c4d3995f79cb426571/invoke.js"></script>
-        </div>
-
-    </div>
-
-    <div class="ad-row">
-        <script type="text/javascript">atOptions = { 'key' : '3aa82e693ea1908408d19cfe6d647225', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };</script>
+<footer class="text-xs opacity-50 my-6">
+  © Study Plan 2026 • All rights reserved
+</footer>
+    <div class="footer-ad-box">
+        <script type="text/javascript">
+            atOptions = { 'key' : '3aa82e693ea1908408d19cfe6d647225', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
+        </script>
         <script src="https://www.highperformanceformat.com/3aa82e693ea1908408d19cfe6d647225/invoke.js"></script>
-        <script type="text/javascript">atOptions = { 'key' : '629afdc60f664ca8c5e67d97f540736f', 'format' : 'iframe', 'height' : 90, 'width' : 728, 'params' : {} };</script>
-        <script src="https://www.highperformanceformat.com/629afdc60f664ca8c5e67d97f540736f/invoke.js"></script>
     </div>
 
-    <script src="https://pl28611491.effectivegatecpm.com/c4/a1/35/c4a135ad813d31a21bac199605c91458.js"></script>
-
-    <script>
-        const urlParams = new URLSearchParams(window.location.search);
-        let destination = urlParams.get('url');
-        var timeLeft = 10;
-        var timerId = setInterval(function() {
-            if (timeLeft <= 0) {
-                clearInterval(timerId);
-                document.getElementById('seconds').style.display = 'none';
-                const btn = document.getElementById('download-btn');
-                btn.style.display = 'inline-block';
-                if(destination) btn.href = destination;
-            } else {
-                document.getElementById('seconds').innerHTML = timeLeft;
-                timeLeft--;
-            }
-        }, 1000);
-    </script>
+    <div class="footer-ad-box">
+        <script type="text/javascript">
+            atOptions = { 'key' : 'c1fbe57adeea1ade3f7f838a985613f1', 'format' : 'iframe', 'height' : 60, 'width' : 468, 'params' : {} };
+        </script>
+        <script src="https://www.highperformanceformat.com/c1fbe57adeea1ade3f7f838a985613f1/invoke.js"></script>
+    </div>
 </body>
 </html>
