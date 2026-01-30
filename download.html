@@ -20,19 +20,25 @@
         .ad-unit { margin: 15px 0; display: flex; justify-content: center; }
         
         .btn { 
-            display: none; 
-            padding: 20px 60px; 
-            background: #27ae60; 
-            color: white; 
-            text-decoration: none; 
-            border-radius: 8px; 
-            font-weight: bold; 
-            font-size: 24px; 
-            border: none; 
-            cursor: pointer; 
-            box-shadow: 0 4px 15px rgba(39, 174, 96, 0.4); 
-            animation: bounce 2s infinite;
-        }
+    display: none; 
+    padding: 20px 60px; 
+    background: #e74c3c; /* මේක තමයි රතු පාට (Red) */
+    color: white; 
+    text-decoration: none; 
+    border-radius: 8px; 
+    font-weight: bold; 
+    font-size: 24px; 
+    border: none; 
+    cursor: pointer; 
+    box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4); 
+    animation: bounce 2s infinite;
+    transition: background 0.3s ease; /* පාට මාරු වෙනකොට ලස්සනට පේන්න */
+}
+
+/* බටන් එක උඩට මවුස් එක ගෙනිච්චම වෙනස් වෙන විදිහ */
+.btn:hover {
+    background: #c0392b; /* තද රතු පාට */
+}
 
         @keyframes bounce {
             0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
