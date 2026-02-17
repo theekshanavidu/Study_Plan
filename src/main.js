@@ -94,10 +94,30 @@ function animatePageIn() {
     }, 50);
 }
 
+// --- Service Worker & Push Permissions ---
+function registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('SW Registered', reg))
+            .catch(err => console.error('SW Register Fallback:', err));
+    }
+}
+
+async function requestNotificationPermission() {
+    if ('Notification' in window) {
+        const permission = await Notification.requestPermission();
+        console.log('Notification permission:', permission);
+        return permission;
+    }
+    return 'denied';
+}
+
 // --- Initialization ---
 window.addEventListener('hashchange', router);
 window.addEventListener('load', () => {
-    onAuthStateChanged(auth, (user) => {
+    registerServiceWorker();
+
+    onAuthStateChanged(auth, async (user) => {
         currentUser = user;
         if (currentUser && currentUser.uid === ADMIN_UID) {
             currentUser.displayName = "Admin";
@@ -106,6 +126,10 @@ window.addEventListener('load', () => {
         // Track user activity for real-time stats
         if (currentUser) {
             UI.trackUserActivity(currentUser.uid);
+            UI.listenForNotifications(currentUser);
+            await requestNotificationPermission();
+        } else {
+            UI.listenForNotifications(null);
         }
 
         // Redirect if on root or welcome and logged in

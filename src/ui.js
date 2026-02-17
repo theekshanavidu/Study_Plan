@@ -39,6 +39,184 @@ async function getUserProfile(uid) {
 const appContainer = document.getElementById('app-container');
 const headerElement = document.getElementById('app-header');
 
+// --- Notification Logic ---
+let notificationUnsubscribe = null;
+
+async function sendNotification(recipientId, title, message) {
+  try {
+    await addDoc(collection(db, 'notifications'), {
+      userId: recipientId,
+      title: title || 'New Notification',
+      message: message,
+      timestamp: Date.now(),
+      isRead: false
+    });
+
+    // Attempt cleanup asynchronously, ignore errors
+    cleanupOldNotifications(recipientId).catch(e => console.log('Cleanup minor error:', e));
+
+    return true;
+  } catch (e) {
+    console.error("Error sending notification:", e);
+    return e;
+  }
+}
+
+async function cleanupOldNotifications(uid) {
+  try {
+    // Simple fetch without composite index, sort in JS
+    const q = query(collection(db, 'notifications'), where('userId', '==', uid));
+    const snap = await getDocs(q);
+    if (snap.size > 5) {
+      const docs = snap.docs.map(d => ({ ref: d.ref, ...d.data() }))
+        .sort((a, b) => b.timestamp - a.timestamp); // Sort desc
+
+      const batch = writeBatch(db);
+      // Keep top 5, delete rest
+      for (let i = 5; i < docs.length; i++) {
+        batch.delete(docs[i].ref);
+      }
+      await batch.commit();
+    }
+  } catch (e) { console.error('Cleanup warning:', e); }
+}
+
+async function broadcastNotification(title, message) {
+  try {
+    const usersSnap = await getDocs(collection(db, 'users'));
+    const batchSize = 400; // Firestore batch limit is 500
+    let batch = writeBatch(db);
+    let count = 0;
+
+    for (const userDoc of usersSnap.docs) {
+      const ref = doc(collection(db, 'notifications'));
+      batch.set(ref, {
+        userId: userDoc.id,
+        title: title,
+        message: message,
+        timestamp: Date.now(),
+        isRead: false
+      });
+      count++;
+      if (count >= batchSize) {
+        await batch.commit();
+        batch = writeBatch(db);
+        count = 0;
+      }
+    }
+    if (count > 0) await batch.commit();
+    return true;
+  } catch (e) {
+    console.error("Broadcast failed:", e);
+    return false;
+  }
+}
+
+export function listenForNotifications(user) {
+  if (!user) {
+    if (notificationUnsubscribe) {
+      notificationUnsubscribe();
+      notificationUnsubscribe = null;
+    }
+    return;
+  }
+
+  if (notificationUnsubscribe) notificationUnsubscribe();
+
+  const q = query(collection(db, 'notifications'), where('userId', '==', user.uid), orderBy('timestamp', 'desc'));
+
+  notificationUnsubscribe = onSnapshot(q, (snapshot) => {
+    const notifications = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    updateNotificationIcon(notifications);
+
+    // Redundancy check: if more than 5, delete extras
+    if (notifications.length > 5) {
+      const batch = writeBatch(db);
+      notifications.slice(5).forEach(n => {
+        batch.delete(doc(db, 'notifications', n.id));
+      });
+      batch.commit();
+    }
+  });
+}
+
+function updateNotificationIcon(notifications) {
+  const hasUnread = notifications.some(n => !n.isRead);
+  console.log('Updating Notification Icon. Count:', notifications.length, 'Unread:', hasUnread);
+  const badge = document.getElementById('notification-badge');
+  if (badge) {
+    if (hasUnread) {
+      badge.style.display = 'block';
+      badge.classList.remove('hidden');
+    } else {
+      badge.style.display = 'none';
+      badge.classList.add('hidden');
+    }
+  }
+
+  const modalContent = document.getElementById('notification-list-container');
+  if (modalContent) {
+    renderNotificationList(notifications);
+  }
+}
+
+// Make sure it's globally available
+window.showNotifications = async () => {
+  console.log("🔔 Bell Clicked!");
+  const user = auth.currentUser;
+  if (!user) {
+    console.log("No user logged in for notifications");
+    return;
+  }
+
+  const q = query(collection(db, 'notifications'), where('userId', '==', user.uid), orderBy('timestamp', 'desc'));
+  const snap = await getDocs(q);
+  const notifications = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+  showFloatingModal(`
+        <div class="p-2">
+            <h3 class="text-xl font-bold text-[var(--text-primary)] mb-4 flex items-center gap-2">
+                <span>🔔</span> Notifications
+            </h3>
+            <div id="notification-list-container" class="space-y-3">
+                <!-- Notifications will be injected here -->
+            </div>
+            ${notifications.length === 0 ? '<p class="text-center text-[var(--text-secondary)] py-8">No notifications yet.</p>' : ''}
+        </div>
+    `);
+
+  renderNotificationList(notifications);
+
+  // Mark as read
+  const unread = notifications.filter(n => !n.isRead);
+  if (unread.length > 0) {
+    const batch = writeBatch(db);
+    unread.forEach(n => {
+      batch.update(doc(db, 'notifications', n.id), { isRead: true });
+    });
+    await batch.commit();
+  }
+};
+
+function renderNotificationList(notifications) {
+  const container = document.getElementById('notification-list-container');
+  if (!container) return;
+
+  if (notifications.length === 0) {
+    container.innerHTML = '<p class="text-center text-[var(--text-secondary)] py-4">All caught up!</p>';
+    return;
+  }
+
+  container.innerHTML = notifications.map(n => `
+        <div class="p-4 rounded-xl border border-[var(--glass-border)] bg-[var(--bg-root)] relative overflow-hidden group">
+            ${!n.isRead ? '<div class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></div>' : ''}
+            <p class="font-bold text-[var(--text-primary)] text-sm mb-1">${n.title || 'New Message'}</p>
+            <p class="text-[var(--text-secondary)] text-sm">${n.message}</p>
+            <p class="text-[0.65rem] text-[var(--text-secondary)] mt-2 opacity-50">${new Date(n.timestamp).toLocaleString()}</p>
+        </div>
+    `).join('');
+}
+
 // --- Theme Toggling ---
 function toggleTheme() {
   // Remove any login/register page classes
@@ -113,6 +291,11 @@ export async function renderHeader(user, navigate, logout) {
         </nav>
 
         <div class="flex items-center gap-4">
+            <button onclick="window.showNotifications()" class="relative p-2 text-2xl hover:bg-[var(--glass-border)] rounded-full transition-colors flex items-center justify-center w-10 h-10">
+                🔔
+                <div id="notification-badge" class="absolute top-1 right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-[var(--bg-secondary)] shadow-sm" style="display: none;"></div>
+            </button>
+
             <button id="theme-btn" class="theme-toggle-btn">
                 ${localStorage.getItem('theme') === 'light' ? '🌗' : '☀️'}
             </button>
@@ -591,7 +774,12 @@ async function renderCharts(uid, dailyGoal, days) {
 export async function renderAdmin(user) {
   appContainer.innerHTML = `
         <div class="max-w-7xl mx-auto pt-8">
-            <h2 class="text-3xl font-bold text-[var(--text-primary)] mb-6">Admin Console 🛠️</h2>
+            <div class="flex flex-col md:flex-row justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold text-[var(--text-primary)]">Admin Console 🛠️</h2>
+                <button onclick="window.openBroadcastModal()" class="btn-primary flex items-center gap-2 mt-4 md:mt-0">
+                    <span>📢</span> Broadcast Message
+                </button>
+            </div>
             
             <!-- Stats Cards -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -699,7 +887,12 @@ export async function renderAdmin(user) {
                 <td>${u.school || '-'}</td>
                 <td><span class="px-2 py-1 bg-indigo-500/10 text-indigo-400 rounded text-xs font-bold">${u.examYear || 'N/A'}</span></td>
                 <td class="text-sm">${u.phone || '-'}</td>
-                <td><button onclick="viewUserDetail('${u.id}')" class="btn-ghost text-xs border border-[var(--glass-border)]">View Full Profile</button></td>
+                <td>
+                    <div class="flex gap-2">
+                        <button onclick="viewUserDetail('${u.id}')" class="btn-ghost text-xs border border-[var(--glass-border)]">View</button>
+                        <button onclick="openNotificationModal('${u.id}', '${(u.firstName || '').replace(/'/g, "\\'")}')" class="btn-ghost text-xs border border-[var(--glass-border)] text-indigo-400">Notify</button>
+                    </div>
+                </td>
             </tr>
         `).join('');
   };
@@ -757,6 +950,58 @@ export async function renderAdmin(user) {
       closeFloatingModal();
       renderAdmin(user);
     }
+  };
+
+  window.openNotificationModal = (uid, name) => {
+    showFloatingModal(`
+            <h3 class="text-xl font-bold text-[var(--text-primary)] mb-4">Send Alert to ${name} 🔔</h3>
+            <form id="notification-form" class="space-y-4">
+                <input name="title" placeholder="Title (e.g. Class Update)" class="smart-input" required>
+                <textarea name="message" placeholder="Type your message here..." class="smart-input min-h-[100px]" required></textarea>
+                <button type="submit" class="btn-primary w-full py-3">Send Notification</button>
+            </form>
+        `);
+
+    document.getElementById('notification-form').onsubmit = async (e) => {
+      e.preventDefault();
+      const title = e.target.title.value;
+      const msg = e.target.message.value;
+      const success = await sendNotification(uid, title, msg);
+      if (success === true) {
+        alert("Notification sent successfully!");
+        closeFloatingModal();
+      } else {
+        alert("Failed to send notification. Error: " + (success.message || "Unknown Error"));
+      }
+    };
+  };
+
+  window.openBroadcastModal = () => {
+    showFloatingModal(`
+            <h3 class="text-xl font-bold text-[var(--text-primary)] mb-4">Broadcast to ALL Users 📢</h3>
+            <p class="text-red-400 text-sm mb-4">Warning: This will send a notification to every registered user.</p>
+            <form id="broadcast-form" class="space-y-4">
+                <input name="title" placeholder="Title (e.g. System Maintenance)" class="smart-input" required>
+                <textarea name="message" placeholder="Type your message here..." class="smart-input min-h-[100px]" required></textarea>
+                <button type="submit" class="btn-primary w-full py-3 bg-red-600 hover:bg-red-700">Send Broadcast</button>
+            </form>
+        `);
+
+    document.getElementById('broadcast-form').onsubmit = async (e) => {
+      e.preventDefault();
+      if (!confirm("Are you surely want to send this to everyone?")) return;
+
+      const title = e.target.title.value;
+      const msg = e.target.message.value;
+
+      const success = await broadcastNotification(title, msg);
+      if (success) {
+        alert("Broadcast sent successfully!");
+        closeFloatingModal();
+      } else {
+        alert("Failed to send broadcast.");
+      }
+    };
   };
 }
 
