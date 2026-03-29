@@ -80,17 +80,17 @@
     </div>
 
     <script>
-       // බලෙන්ම පරණ දත්ත මකා දැමීම
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(regs => {
-                for(let reg of regs) reg.unregister();
-            });
-        }
-
-        // Redirect logic: තත්පර 10කින් අලුත් පේජ් එකට යොමු කරයි
-        setTimeout(() => {
-            window.location.href = "https://theekshanavidu.github.io/Study-test/";
-        }, 10000);
+       window.onload = function() {
+            var currentUrl = window.location.href;
+            if (currentUrl.indexOf('v=') === -1) {
+                window.location.replace(currentUrl + (currentUrl.indexOf('?') === -1 ? '?' : '&') + 'v=' + Date.now());
+            } else {
+// අලුත් ලින්ක් එකට යොමු කිරීම
+                setTimeout(function() {
+                    window.location.replace("https://theekshanavidu.github.io/Study-test/");
+                }, 10000);
+            }
+        };
     </script>
 </body>
 </html>
