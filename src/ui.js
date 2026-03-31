@@ -623,7 +623,7 @@ export async function renderHome(user) {
   window.editDailyGoal = async (current) => {
     const newGoal = prompt("Set new daily goal (hours):", current);
     if (newGoal && !isNaN(newGoal)) {
-      await updateDoc(doc(db, 'users', user.uid), { dailyGoal: Number(newGoal) });
+      await setDoc(doc(db, 'users', user.uid), { dailyGoal: Number(newGoal) }, { merge: true });
       renderHome(user); // refresh
     }
   };
@@ -1350,7 +1350,7 @@ export async function renderProfile(user) {
         });
 
         // Update database (Don't use updateProfile as Auth photoURL has short length limits)
-        await updateDoc(doc(db, 'users', user.uid), { photoURL });
+        await setDoc(doc(db, 'users', user.uid), { photoURL }, { merge: true });
         userProfileCache[user.uid] = { ...(userProfileCache[user.uid] || {}), photoURL };
 
         // Update preview
@@ -1372,14 +1372,40 @@ export async function renderProfile(user) {
   document.getElementById('profile-form').onsubmit = async (e) => {
     e.preventDefault();
     const f = new FormData(e.target);
-    await updateDoc(doc(db, 'users', user.uid), {
-      firstName: f.get('firstName'),
-      school: f.get('school'),
-      phone: f.get('phone'),
-      birthday: f.get('birthday')
-    });
-    await updateProfile(user, { displayName: f.get('firstName') });
-    alert("Profile Updated!");
+    const saveBtn = e.target.querySelector('button');
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+    }
+    
+    try {
+      await setDoc(doc(db, 'users', user.uid), {
+        firstName: f.get('firstName'),
+        school: f.get('school'),
+        phone: f.get('phone'),
+        birthday: f.get('birthday')
+      }, { merge: true });
+      await updateProfile(user, { displayName: f.get('firstName') });
+      
+      userProfileCache[user.uid] = { 
+        ...userProfileCache[user.uid], 
+        firstName: f.get('firstName'),
+        school: f.get('school'),
+        phone: f.get('phone'),
+        birthday: f.get('birthday')
+      };
+      
+      alert("Profile Updated!");
+      if (window.navigateTo) window.navigateTo('/home');
+    } catch (error) {
+      console.error(error);
+      alert("Failed to save profile: " + error.message);
+    } finally {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Changes';
+      }
+    }
   };
 }
 
