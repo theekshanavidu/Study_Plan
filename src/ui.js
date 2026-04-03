@@ -277,8 +277,8 @@ export async function renderHeader(user, navigate, logout) {
 
   headerElement.innerHTML = `
         <div class="flex items-center gap-3 cursor-pointer" onclick="navigateTo('/home')">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-lg shadow-indigo-500/20">
-                ST
+            <div class="w-10 h-10 rounded-xl overflow-hidden shadow-lg shadow-indigo-500/20 bg-white">
+                <img src="Icon 1.png" alt="StudyTracker Logo" class="w-full h-full object-contain p-1">
             </div>
             <span class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[var(--text-primary)] to-[var(--text-secondary)] hidden sm:block">StudyTracker</span>
         </div>
@@ -352,33 +352,45 @@ export function renderLogin(navigate) {
 
 
   appContainer.innerHTML = `
-        <div class="flex min-h-screen items-center justify-center p-4">
-            <div class="smart-card w-full max-w-md bg-[var(--bg-secondary)] relative overflow-hidden">
-                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-cyan-500"></div>
-                <div class="text-center mb-8">
-                    <h1 class="text-3xl font-bold text-[var(--text-primary)] mb-2">Welcome Back</h1>
-                    <p class="text-[var(--text-secondary)]">Sign in to continue your progress</p>
+        <div class="flex min-h-[80vh] items-center justify-center p-4">
+            <div class="smart-card w-full max-w-md bg-[var(--bg-secondary)] relative overflow-hidden border border-indigo-500/20">
+                <div class="text-center mb-8 mt-2">
+                    <div class="flex justify-center mb-4">
+                        <div class="w-16 h-16 rounded-2xl shadow-xl shadow-indigo-500/20 overflow-hidden bg-white">
+                            <img src="Icon 1.png" alt="StudyTracker Logo" class="w-full h-full object-contain p-1">
+                        </div>
+                    </div>
+                    <h1 class="text-2xl font-bold text-[var(--text-primary)] mb-2">Login to StudyTracker</h1>
+                    <p class="text-[var(--text-secondary)] text-sm">Securely access your study dashboard</p>
                 </div>
 
-                <form id="login-form" class="space-y-4">
-                    <input type="email" name="email" placeholder="Email" class="smart-input" required>
-                    <input type="password" name="password" placeholder="Password" class="smart-input" required>
-                    <button type="submit" class="w-full btn-primary py-3 rounded-xl mt-4">Sign In</button>
+                <form id="login-form" class="space-y-4" action="javascript:void(0);" method="POST">
+                    <input type="email" name="email" placeholder="Email Address" class="smart-input w-full" required>
+                    <input type="password" name="password" placeholder="Password" class="smart-input w-full" required autocomplete="current-password">
+                    <button type="submit" class="w-full bg-gradient-to-r from-indigo-500 to-cyan-500 text-white font-bold py-3 rounded-xl mt-4 hover:shadow-lg hover:shadow-indigo-500/30 transition-all">Sign In to Account</button>
                 </form>
 
                 <div class="my-6 flex items-center gap-4">
                     <hr class="flex-1 border-[var(--glass-border)]">
-                    <span class="text-xs text-[var(--text-secondary)]uppercase">Or continue with</span>
+                    <span class="text-xs text-[var(--text-secondary)] uppercase">Or continue with</span>
                     <hr class="flex-1 border-[var(--glass-border)]">
                 </div>
 
-                <button id="google-login" class="w-full bg-[var(--bg-root)] border border-[var(--glass-border)] text-[var(--text-primary)] py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-[var(--glass-border)] transition-colors">
-                    <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="w-5 h-5"> Google Account
+                <button id="google-login" class="w-full bg-[var(--bg-root)] border border-[var(--glass-border)] text-[var(--text-primary)] py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-[var(--glass-border)] transition-colors mb-6">
+                    <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="w-5 h-5" alt="Google Logo"> 
+                    <span class="font-medium">Google Account</span>
                 </button>
 
-                <p class="text-center mt-6 text-sm text-[var(--text-secondary)]">
-                    Don't have an account? <a href="#/register" class="text-indigo-400 font-bold hover:underline">Sign up</a>
-                </p>
+                <div class="text-center space-y-4 pt-4 border-t border-[var(--glass-border)]">
+                    <p class="text-sm text-[var(--text-secondary)]">
+                        Don't have an account? <a href="#/register" class="text-indigo-400 font-bold hover:underline">Sign up here</a>
+                    </p>
+                    <div class="flex justify-center gap-4 text-xs text-[var(--text-secondary)]">
+                        <a href="Privacy_Policy.html" class="hover:text-indigo-400 hover:underline">Privacy Policy</a>
+                        <span>&bull;</span>
+                        <a href="Terms_of_Service.html" class="hover:text-indigo-400 hover:underline">Terms of Service</a>
+                    </div>
+                </div>
             </div>
         </div>
     `;
@@ -422,27 +434,35 @@ export function renderRegister(navigate) {
 
 
   appContainer.innerHTML = `
-        <div class="flex min-h-screen items-center justify-center p-4">
-             <div class="smart-card w-full max-w-lg bg-[var(--bg-secondary)] relative">
-                <h2 class="text-2xl font-bold text-[var(--text-primary)] mb-6 text-center">Create Account</h2>
-                <form id="register-form" class="grid gap-4">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div><label class="text-xs uppercase font-bold text-[var(--text-secondary)] mb-1 block">Full Name</label><input name="name" placeholder="Full Name" class="smart-input" required></div>
-                        <div><label class="text-xs uppercase font-bold text-[var(--text-secondary)] mb-1 block">Birthday</label><input name="birthday" onfocus="(this.type='date')" placeholder="Birthday" class="smart-input" required></div>
+        <div class="flex min-h-[80vh] items-center justify-center p-4">
+             <div class="smart-card w-full max-w-lg bg-[var(--bg-secondary)] relative border border-indigo-500/20">
+                <div class="text-center mb-6">
+                    <div class="flex justify-center mb-4">
+                        <div class="w-16 h-16 rounded-2xl shadow-xl shadow-indigo-500/20 overflow-hidden bg-white">
+                            <img src="Icon 1.png" alt="StudyTracker Logo" class="w-full h-full object-contain p-1">
+                        </div>
                     </div>
-                    <div><label class="text-xs uppercase font-bold text-[var(--text-secondary)] mb-1 block">Email Address</label><input name="email" type="email" placeholder="Email" class="smart-input" required></div>
-                    <div><label class="text-xs uppercase font-bold text-[var(--text-secondary)] mb-1 block">Phone Number</label><input type="tel" name="phone" pattern="[0-9]{10}" maxlength="10" placeholder="07XXXXXXXX" class="smart-input" title="Please enter exactly 10 digits" required></div>
-                    <div><label class="text-xs uppercase font-bold text-[var(--text-secondary)] mb-1 block">School</label><input name="school" placeholder="School" class="smart-input" required></div>
+                    <h2 class="text-xl font-bold text-[var(--text-primary)]">Create StudyTracker Account</h2>
+                    <p class="text-[var(--text-secondary)] text-sm mt-1">Join us to manage your studies efficiently</p>
+                </div>
+                <form id="register-form" class="grid gap-4" action="javascript:void(0);" method="POST">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label class="text-xs uppercase font-bold text-[var(--text-secondary)] mb-1 block">Full Name</label><input name="name" placeholder="Full Name" class="smart-input w-full" required></div>
+                        <div><label class="text-xs uppercase font-bold text-[var(--text-secondary)] mb-1 block">Birthday</label><input name="birthday" onfocus="(this.type='date')" placeholder="Birthday" class="smart-input w-full" required></div>
+                    </div>
+                    <div><label class="text-xs uppercase font-bold text-[var(--text-secondary)] mb-1 block">Email Address</label><input name="email" type="email" placeholder="Email Address" class="smart-input w-full" required autocomplete="email"></div>
+                    <div><label class="text-xs uppercase font-bold text-[var(--text-secondary)] mb-1 block">Phone Number</label><input type="tel" name="phone" pattern="[0-9]{10}" maxlength="10" placeholder="07XXXXXXXX" class="smart-input w-full" title="Please enter exactly 10 digits" required></div>
+                    <div><label class="text-xs uppercase font-bold text-[var(--text-secondary)] mb-1 block">School</label><input name="school" placeholder="School Name" class="smart-input w-full" required></div>
                     <div><label class="text-xs uppercase font-bold text-[var(--text-secondary)] mb-1 block">A/L Batch</label>
-                    <select name="examYear" class="smart-input">
+                    <select name="examYear" class="smart-input w-full">
                         <option value="2026 A/L">2026 A/L</option>
                         <option value="2027 A/L">2027 A/L</option>
                         <option value="2028 A/L">2028 A/L</option>
                         <option value="2029 A/L">2029 A/L</option>
                     </select></div>
-                    <div><label class="text-xs uppercase font-bold text-[var(--text-secondary)] mb-1 block">Password</label><input name="password" type="password" placeholder="Password" class="smart-input" required></div>
+                    <div><label class="text-xs uppercase font-bold text-[var(--text-secondary)] mb-1 block">Password</label><input name="password" type="password" placeholder="Password" class="smart-input w-full" required autocomplete="new-password"></div>
                     
-                    <button type="submit" class="w-full btn-primary py-3 rounded-xl mt-2">Create Account</button>
+                    <button type="submit" class="w-full bg-gradient-to-r from-indigo-500 to-cyan-500 text-white font-bold py-3 rounded-xl mt-4 hover:shadow-lg hover:shadow-indigo-500/30 transition-all">Create Account</button>
                 </form>
                 
                 <div class="my-6 flex items-center gap-4">
@@ -451,11 +471,19 @@ export function renderRegister(navigate) {
                     <hr class="flex-1 border-[var(--glass-border)]">
                 </div>
 
-                <button id="google-signup" class="w-full bg-[var(--bg-root)] border border-[var(--glass-border)] text-[var(--text-primary)] py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-[var(--glass-border)] transition-colors">
-                    <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="w-5 h-5"> Google Account
+                <button id="google-signup" class="w-full bg-[var(--bg-root)] border border-[var(--glass-border)] text-[var(--text-primary)] py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-[var(--glass-border)] transition-colors mb-6">
+                    <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="w-5 h-5" alt="Google Logo"> 
+                    <span class="font-medium">Google Account</span>
                 </button>
                 
-                 <p class="text-center mt-4 text-sm text-[var(--text-secondary)]">Already have an account? <a href="#/login" class="text-indigo-400 font-bold hover:underline">Login</a></p>
+                <div class="text-center space-y-4 pt-4 border-t border-[var(--glass-border)]">
+                    <p class="text-sm text-[var(--text-secondary)]">Already have an account? <a href="#/login" class="text-indigo-400 font-bold hover:underline">Login here</a></p>
+                    <div class="flex justify-center gap-4 text-xs text-[var(--text-secondary)]">
+                        <a href="Privacy_Policy.html" class="hover:text-indigo-400 hover:underline">Privacy Policy</a>
+                        <span>&bull;</span>
+                        <a href="Terms_of_Service.html" class="hover:text-indigo-400 hover:underline">Terms of Service</a>
+                    </div>
+                </div>
              </div>
         </div>
     `;
