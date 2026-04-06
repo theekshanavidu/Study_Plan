@@ -1,5 +1,5 @@
 // Service Worker for StudyTracker Pro
-const CACHE_NAME = 'studytracker-v3';
+const CACHE_NAME = 'studytracker-v5';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
@@ -35,24 +35,35 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+    // Only handle GET requests
     if (event.request.method !== 'GET') return;
 
+    // Skip Chrome extension requests or non-HTTP protocols
+    if (!event.request.url.startsWith('http')) return;
+
     event.respondWith(
-        fetch(event.request)
-            .then((response) => {
-                // On successful fetch, update the cache
-                if (response && response.status === 200 && response.type === 'basic') {
-                    const responseToCache = response.clone();
-                    caches.open(CACHE_NAME).then((cache) => {
-                        cache.put(event.request, responseToCache);
-                    });
-                }
-                return response;
-            })
-            .catch(() => {
-                // Return cached version if network fails
-                return caches.match(event.request);
-            })
+        caches.match(event.request).then((cachedResponse) => {
+            // Stale-while-revalidate strategy: 
+            // 1. Fetch from network in the background to get latest version
+            const fetchPromise = fetch(event.request)
+                .then((networkResponse) => {
+                    // Update cache with new response
+                    if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+                        const responseToCache = networkResponse.clone();
+                        caches.open(CACHE_NAME).then((cache) => {
+                            cache.put(event.request, responseToCache);
+                        });
+                    }
+                    return networkResponse;
+                })
+                .catch(() => {
+                    // Ignore network failure when running in offline mode
+                });
+
+            // 2. Immediately return the cached response (Instant Load) 
+            // OR if not cached, wait for the network fetch
+            return cachedResponse || fetchPromise;
+        })
     );
 });
 

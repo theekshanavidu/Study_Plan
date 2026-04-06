@@ -63,10 +63,11 @@ class Particle {
             let p2 = particles[j];
             let dx = this.x - p2.x;
             let dy = this.y - p2.y;
-            let distance = Math.sqrt(dx * dx + dy * dy);
+            let distSq = dx * dx + dy * dy;
             let minDist = this.radius + p2.radius + 8; // Extra padding for organized spacing
 
-            if (distance < minDist) {
+            if (distSq < minDist * minDist) {
+                let distance = Math.sqrt(distSq);
                 // Gentle push mathematically
                 let force = (minDist - distance) * 0.015;
                 let ax = dx * force;
@@ -95,10 +96,11 @@ class Particle {
         if (mouse.x !== null && mouse.y !== null) {
             let dx = this.x - mouse.x;
             let dy = this.y - mouse.y;
-            let distance = Math.sqrt(dx * dx + dy * dy);
+            let distSq = dx * dx + dy * dy;
             let mouseRadius = 200; // Large, smooth interaction field
             
-            if (distance < mouseRadius) {
+            if (distSq < mouseRadius * mouseRadius) {
+                let distance = Math.sqrt(distSq) || 1;
                 let forceDirectionX = dx / distance;
                 let forceDirectionY = dy / distance;
                 let force = (mouseRadius - distance) / mouseRadius; 
@@ -114,7 +116,7 @@ class Particle {
         }
     }
 
-    draw(ctx) {
+    draw(ctx, isLowPerformance) {
         // High-end Perspective Scaling
         const perspective = 500;
         const scale = perspective / (perspective - (this.z * 180)); 
@@ -129,10 +131,10 @@ class Particle {
 
         ctx.strokeStyle = this.color;
         
-        // Elegant Glow Effect for tiles closest to screen
-        if (this.z > 0.6) {
+        // Disable Expensive Glow Effects for performance unless Z is close and device is high-end
+        if (!isLowPerformance && this.z > 0.8) {
             ctx.shadowColor = this.color;
-            ctx.shadowBlur = 12 * scale;
+            ctx.shadowBlur = 8 * scale;
         } else {
             ctx.shadowBlur = 0;
         }
@@ -221,9 +223,16 @@ export function initParticles() {
         mouse.y = null;
     });
 
+    let isLowPerformance = window.innerWidth < 1024; // Treat devices below 1024px as low perf for graphics
+
     // Elegant Resizing using High-DPI Resolution scaling (Makes text ultra-crisp!)
     function resize() {
-        const dpr = window.devicePixelRatio || 1;
+        isLowPerformance = window.innerWidth < 1024;
+        
+        // Cap Maximum Device Pixel Ratio. Dpr above 1.5 destroys performance on full-screen canvases.
+        const maxDpr = isLowPerformance ? 1 : 1.5;
+        const dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
+        
         logicalBounds.width = window.innerWidth;
         logicalBounds.height = window.innerHeight;
         
@@ -327,9 +336,10 @@ export function initParticles() {
         }
 
         // Apply true visual depth-sorting to ensure objects coming "Forward" obscure things "Behind" them natively
+        // Do NOT sort the main 'particles' array in-place, because their index is used mathematically for sphere positioning!
         const sortedParticles = [...particles].sort((a, b) => a.z - b.z);
 
-        sortedParticles.forEach(p => p.draw(ctx));
+        sortedParticles.forEach(p => p.draw(ctx, isLowPerformance));
 
         requestAnimationFrame(animate);
     }
