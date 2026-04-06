@@ -24,6 +24,15 @@ class Particle {
         this.radius = this.boxSize / 2; // For smooth collision physics
     }
 
+    updateMobile(bounds) {
+        // Minimal logic for mobile without heavy physics
+        this.y -= 0.15; 
+        if (this.y < -50) {
+            this.y = bounds.height + 50;
+            this.x = Math.random() * bounds.width;
+        }
+    }
+
     updateFlow(particles, index, mouse, gravityIntensity, bounds) {
         // Natural upward drift (Anti-Gravity effect)
         this.velocity.y += gravityIntensity;
@@ -116,13 +125,15 @@ class Particle {
         }
     }
 
-    draw(ctx, isLowPerformance) {
+    draw(ctx, isLowPerformance, isMobile) {
         // High-end Perspective Scaling
         const perspective = 500;
         const scale = perspective / (perspective - (this.z * 180)); 
         
-        // Depth-based transparency mapping for UI compliance
+        // Depth-based transparency mapping for UI compliance, much fainter on mobile
         let alpha = Math.max(0.05, Math.min(0.5, (this.z + 1.8) / 3)); 
+        if (isMobile) alpha *= 0.3; // Faint on mobile
+
         ctx.globalAlpha = alpha; 
         
         const currentBoxSize = this.boxSize * scale; 
@@ -132,7 +143,7 @@ class Particle {
         ctx.strokeStyle = this.color;
         
         // Disable Expensive Glow Effects for performance unless Z is close and device is high-end
-        if (!isLowPerformance && this.z > 0.8) {
+        if (!isLowPerformance && !isMobile && this.z > 0.8) {
             ctx.shadowColor = this.color;
             ctx.shadowBlur = 8 * scale;
         } else {
@@ -203,7 +214,10 @@ export function initParticles() {
     
     // Ordered Periodic elements mapping exactly to 118 items
     const chars = ['H','He','Li','Be','B','C','N','O','F','Ne','Na','Mg','Al','Si','P','S','Cl','Ar','K','Ca','Sc','Ti','V','Cr','Mn','Fe','Co','Ni','Cu','Zn','Ga','Ge','As','Se','Br','Kr','Rb','Sr','Y','Zr','Nb','Mo','Tc','Ru','Rh','Pd','Ag','Cd','In','Sn','Sb','Te','I','Xe','Cs','Ba','La','Ce','Pr','Nd','Pm','Sm','Eu','Gd','Tb','Dy','Ho','Er','Tm','Yb','Lu','Hf','Ta','W','Re','Os','Ir','Pt','Au','Hg','Tl','Pb','Bi','Po','At','Rn','Fr','Ra','Ac','Th','Pa','U','Np','Pu','Am','Cm','Bk','Cf','Es','Fm','Md','No','Lr','Rf','Db','Sg','Bh','Hs','Mt','Ds','Rg','Cn','Nh','Fl','Mc','Lv','Ts','Og'];
-    const particleCount = chars.length;
+    
+    let isMobile = window.innerWidth < 768; // true mobile size
+    let isLowPerformance = window.innerWidth < 1024; // tablets/low end
+    let particleCount = isMobile ? 32 : chars.length; // Use only 32 elements on mobile
 
     let state = 'sphere'; 
     let morphInterval = 14000; // Soft 14-second transition delay
@@ -223,11 +237,10 @@ export function initParticles() {
         mouse.y = null;
     });
 
-    let isLowPerformance = window.innerWidth < 1024; // Treat devices below 1024px as low perf for graphics
-
     // Elegant Resizing using High-DPI Resolution scaling (Makes text ultra-crisp!)
     function resize() {
         isLowPerformance = window.innerWidth < 1024;
+        isMobile = window.innerWidth <= 768;
         
         // Cap Maximum Device Pixel Ratio. Dpr above 1.5 destroys performance on full-screen canvases.
         const maxDpr = isLowPerformance ? 1 : 1.5;
@@ -244,19 +257,18 @@ export function initParticles() {
         
         ctx.scale(dpr, dpr);
     }
-    window.addEventListener('resize', resize);
-    resize(); 
-
     function init() {
         particles = [];
         const isDarkTheme = document.documentElement.getAttribute('data-theme') !== 'light';
         const activeColors = isDarkTheme ? darkColors : lightColors;
 
-        for (let i = 0; i < particleCount; i++) {
+        const currentParticleCount = isMobile ? 15 : particleCount;
+
+        for (let i = 0; i < currentParticleCount; i++) {
             const x = Math.random() * logicalBounds.width;
             const y = Math.random() * logicalBounds.height;
-            const char = chars[i];
-            const atomicNum = i + 1; 
+            const char = chars[i % chars.length]; // Modulo to avoid out of bounds if current is higher than chars
+            const atomicNum = (i % chars.length) + 1; 
             
             // Generate organized color pattern to simulate element properties/groups
             const color = activeColors[i % activeColors.length];
@@ -266,6 +278,15 @@ export function initParticles() {
     }
 
     window.addEventListener('theme-change', init);
+    // Re-init on resize to update mobile/desktop counts
+    window.addEventListener('resize', () => {
+        const wasMobile = isMobile;
+        resize();
+        if (wasMobile !== isMobile) {
+            particleCount = isMobile ? 15 : chars.length;
+            init();
+        }
+    });
 
     function calculateSphereTargets() {
         // Dynamic Sphere Radius calculation
@@ -309,41 +330,50 @@ export function initParticles() {
     function animate() {
         ctx.clearRect(0, 0, logicalBounds.width, logicalBounds.height);
 
-        const now = Date.now();
-        if (now - lastMorphTime > morphInterval) {
-            state = state === 'flow' ? 'sphere' : 'flow';
-            lastMorphTime = now;
-            
-            if (state === 'flow') {
-                // Elegant Scatter Animation out of Globe
-                particles.forEach(p => {
-                    let dx = p.x - logicalBounds.width / 2;
-                    let dy = p.y - logicalBounds.height / 2;
-                    let dist = Math.sqrt(dx * dx + dy * dy) || 1;
-                    
-                    p.velocity.x = (dx / dist) * (Math.random() * 4 + 1);
-                    p.velocity.y = (dy / dist) * (Math.random() * 4 + 1);
-                    p.velocity.z = (Math.random() - 0.5) * 3;
-                });
+        if (!isMobile) {
+            const now = Date.now();
+            if (now - lastMorphTime > morphInterval) {
+                state = state === 'flow' ? 'sphere' : 'flow';
+                lastMorphTime = now;
+                
+                if (state === 'flow') {
+                    // Elegant Scatter Animation out of Globe
+                    particles.forEach(p => {
+                        let dx = p.x - logicalBounds.width / 2;
+                        let dy = p.y - logicalBounds.height / 2;
+                        let dist = Math.sqrt(dx * dx + dy * dy) || 1;
+                        
+                        p.velocity.x = (dx / dist) * (Math.random() * 4 + 1);
+                        p.velocity.y = (dy / dist) * (Math.random() * 4 + 1);
+                        p.velocity.z = (Math.random() - 0.5) * 3;
+                    });
+                }
             }
-        }
 
-        if (state === 'sphere') {
-            calculateSphereTargets();
-            particles.forEach(p => p.updateSphere(mouse));
+            if (state === 'sphere') {
+                calculateSphereTargets();
+                particles.forEach(p => p.updateSphere(mouse));
+            } else {
+                particles.forEach((p, index) => p.updateFlow(particles, index, mouse, -0.015, logicalBounds));
+            }
         } else {
-            particles.forEach((p, index) => p.updateFlow(particles, index, mouse, -0.015, logicalBounds));
+            // Ultra-lightweight mobile update
+            particles.forEach(p => {
+                p.y -= 0.3;
+                if (p.y < -50) p.y = logicalBounds.height + 50;
+            });
         }
 
         // Apply true visual depth-sorting to ensure objects coming "Forward" obscure things "Behind" them natively
         // Do NOT sort the main 'particles' array in-place, because their index is used mathematically for sphere positioning!
         const sortedParticles = [...particles].sort((a, b) => a.z - b.z);
 
-        sortedParticles.forEach(p => p.draw(ctx, isLowPerformance));
+        sortedParticles.forEach(p => p.draw(ctx, isLowPerformance, isMobile));
 
         requestAnimationFrame(animate);
     }
 
+    resize();
     init();
     animate();
 }
